@@ -13,7 +13,7 @@ const COOKIES_PATH = path.resolve(
     process.env.COOKIES_FILE_PATH || "./cookies.json",
 );
 const PROMPT = process.env.PROMPT || "请将这张图片转换为吉卜力风格的图像。去除右下角文字，保持原来图像的长宽比";
-const proxy = process.env.PROXY;
+const proxy = process.env.PROXY || '';
 const HEADLESS_MODE = process.env.HEADLESS !== "false";
 const UPLOAD_TIMEOUT = parseInt(process.env.UPLOAD_TIMEOUT || "20000", 10);
 const INPUT_TIMEOUT = parseInt(process.env.INPUT_TIMEOUT || "5000", 10);
@@ -61,8 +61,9 @@ const sendToTelegram = async (isSuccess, content, caption = "") => {
                     `✉️ [后台] 正在发送图片 URL 到 Telegram Chat ID: ${TELEGRAM_CHAT_ID}`,
                 ),
             );
-            const captionWithContent = `${caption} \n🔗${content}`;
-            await bot.sendPhoto(TELEGRAM_CHAT_ID, content, { caption: captionWithContent });
+            const captionWithContent = `${caption} \n\n🔗${content}`;
+            await bot.sendMessage(TELEGRAM_CHAT_ID, captionWithContent);
+            await bot.sendPhoto(TELEGRAM_CHAT_ID, content, { caption });
             console.log(chalk.green(`✅ [后台] 图片 URL 已成功发送到 Telegram。`));
         } else {
             console.log(
@@ -290,7 +291,10 @@ async function processImageInBackground(uploadedFilePath, originalFilename) {
 // Add queue processing function
 function addToProcessQueue(uploadedFilePath, originalFilename) {
     queue.add(async () => {
-        console.log(chalk.blue(`📋 开始处理队列任务: ${originalFilename} (队列中还有 ${queue.size} 个任务)`));
+
+        const msg = `📋 正在处理队列任务: ${originalFilename} (队列中还有 ${queue.size} 个任务)`;
+        await bot.sendMessage(TELEGRAM_CHAT_ID, msg);
+        console.log(chalk.blue(msg));
         await processImageInBackground(uploadedFilePath, originalFilename);
     }).catch((error) => {
         console.error(
