@@ -4,7 +4,7 @@ module.exports = {
         name: "chatgpt-ghibli-flow",
         script: "pnpm", // Keep pnpm if solution 1 didn't work or isn't applicable
         args: "start",
-        interpreter: '/bin/zsh',
+        interpreter: 'none',
         cwd: __dirname,
         env: {
             "NODE_ENV": "production",
