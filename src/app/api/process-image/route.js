@@ -199,7 +199,9 @@ async function countdown(label, durationMs) {
     return new Promise((resolve) => {
         const timer = setInterval(() => {
             remaining -= interval;
-            writeOutput(chalk.yellow(`🧙 ${label}（剩余 ${formatTime(remaining)}）`));
+            if(process.stdout.isTTY){
+                writeOutput(chalk.yellow(`🧙 ${label}（剩余 ${formatTime(remaining)}）`));
+            }
 
             if (remaining <= 0) {
                 clearInterval(timer);
