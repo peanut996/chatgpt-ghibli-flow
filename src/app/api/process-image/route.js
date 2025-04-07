@@ -64,11 +64,8 @@ const sendToTelegram = async (isSuccess, content, caption = "") => {
             const captionUrl = `[🔗 ${caption}](${content})`;
             await bot.sendPhoto(TELEGRAM_CHAT_ID, content, {
                 parse_mode: "Markdown",
-                caption: captionUrl
+                caption: captionUrl,
             });
-            await bot.sendMessage(TELEGRAM_CHAT_ID, captionUrl, {
-                parse_mode: "Markdown",
-            })
             console.log(chalk.green(`✅ [后台] 图片 URL 已成功发送到 Telegram。`));
         } else {
             console.log(
@@ -263,7 +260,7 @@ async function processImageInBackground(uploadedFilePath, originalFilename) {
         const imageUrl = imageUrls[imageUrls.length - 1];
         console.log(chalk.green(`📥 下载图像: ${imageUrl}`));
 
-        const caption = `🎨 ${originalFilename}`;
+        const caption = `${originalFilename}`;
         await sendToTelegram(true, imageUrl, caption);
     } catch (error) {
         console.error(
