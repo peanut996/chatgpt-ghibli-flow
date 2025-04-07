@@ -12,8 +12,7 @@ import PQueue from 'p-queue';
 const COOKIES_PATH = path.resolve(
     process.env.COOKIES_FILE_PATH || "./cookies.json",
 );
-const PROMPT =
-    "请将这张图片转换为吉卜力风格的图像。去除右下角文字，保持原来图像的长宽比";
+const PROMPT = process.env.PROMPT || "请将这张图片转换为吉卜力风格的图像。去除右下角文字，保持原来图像的长宽比";
 const proxy = process.env.PROXY;
 const HEADLESS_MODE = process.env.HEADLESS !== "false";
 const UPLOAD_TIMEOUT = parseInt(process.env.UPLOAD_TIMEOUT || "20000", 10);
