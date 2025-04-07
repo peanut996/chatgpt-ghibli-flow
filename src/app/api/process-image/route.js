@@ -63,11 +63,11 @@ const sendToTelegram = async (isSuccess, content, caption = "") => {
             );
             const captionUrl = `[🔗 ${caption}](${content})`;
             await bot.sendPhoto(TELEGRAM_CHAT_ID, content, {
-                parse_mode: "MarkdownV2",
+                parse_mode: "Markdown",
                 caption: captionUrl
             });
             await bot.sendMessage(TELEGRAM_CHAT_ID, captionUrl, {
-                parse_mode: "MarkdownV2",
+                parse_mode: "Markdown",
             })
             console.log(chalk.green(`✅ [后台] 图片 URL 已成功发送到 Telegram。`));
         } else {
