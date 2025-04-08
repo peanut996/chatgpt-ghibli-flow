@@ -160,7 +160,8 @@ const sendToEmail = async (
     htmlBody = `
       <h1 align="center">GhibliFlow Studio</h1>
       <p>文件 <strong>${originalFilename}</strong> 已成功处理。</p>
-      <p>🔗 <a href="${content}">下载链接</a></p>
+      <p>🔗 <a href="${content}">下载链接</a> </p>
+      <p><small>‼️请尽快保存图片，以防下载链接过期</small></p>
       <img src="${content}" alt="Generated Image" style="max-width: 400px; height: auto; border: 1px solid #ccc; margin-top: 10px;" />
     `;
   } else {
