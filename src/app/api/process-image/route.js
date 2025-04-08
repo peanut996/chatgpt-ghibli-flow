@@ -152,21 +152,20 @@ const sendToEmail = async (
   }
 
   const subject = isSuccess
-    ? `✅ GhibliFlow 处理成功: ${originalFilename}`
-    : `❌ GhibliFlow 处理失败: ${originalFilename}`;
+    ? `✅ GhibliFlow Studio - 处理成功 - ${originalFilename}`
+    : `❌ GhibliFlow Studio - 处理失败 - ${originalFilename}`;
 
   let htmlBody = '';
   if (isSuccess) {
     htmlBody = `
-      <h1>处理成功!</h1>
+      <h1 align="center">GhibliFlow Studio</h1>
       <p>文件 <strong>${originalFilename}</strong> 已成功处理。</p>
-      <p>生成的图片链接: <a href="${content}">${content}</a></p>
+      <p>🔗 <a href="${content}">下载链接</a></p>
       <img src="${content}" alt="Generated Image" style="max-width: 400px; height: auto; border: 1px solid #ccc; margin-top: 10px;" />
-      <p><small>使用的 Prompt: ${promptUsed || '无'}</small></p>
     `;
   } else {
     htmlBody = `
-      <h1>处理失败</h1>
+      <h1 align="center">GhibliFlow Studio</h1>
       <p>处理文件 <strong>${originalFilename || '未知'}</strong> 时遇到错误。</p>
       <p>错误详情:</p>
       <pre style="background-color: #fcecec; border: 1px solid #fcc; padding: 10px; border-radius: 4px;">${content}</pre>
@@ -484,13 +483,13 @@ function addToProcessQueue(
     .add(async () => {
       const promptSnippet = finalPromptToUse;
       const emailNotice = recipientEmail ? ` -> ${recipientEmail}` : '';
-      const msg = `⏳ 处理任务加入队列: ${originalFilename}  ${emailNotice} (队列 ${queue.pending + queue.size})`;
+      const msg = `⏳ 处理任务加入队列: ${originalFilename}  ${emailNotice} (队列剩余任务：${queue.pending + queue.size})`;
 
       // Send queue message to Telegram (optional, keep if useful)
       if (bot && TELEGRAM_CHAT_ID) {
         try {
           // Avoid sending email address to Telegram group for privacy
-          const tgMsg = `⏳ 处理任务加入队列: ${originalFilename} ${promptSnippet} (队列 ${queue.pending + queue.size})`;
+          const tgMsg = `⏳ 处理任务加入队列: ${originalFilename} (队列剩余任务：${queue.pending + queue.size})`;
           await bot.sendMessage(TELEGRAM_CHAT_ID, tgMsg);
         } catch (tgError) {
           console.error(chalk.red('❌ 发送队列消息到Telegram失败:'), tgError);
