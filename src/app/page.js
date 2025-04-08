@@ -205,7 +205,7 @@ export default function HomePage() {
 
       <h1 className="mb-10 text-center text-4xl font-bold tracking-tight text-gray-800 md:text-5xl">
         <span className="bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
-          🎨 GhibliFlow Studio 🎨
+          GhibliFlow Studio
         </span>
       </h1>
 
