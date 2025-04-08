@@ -54,13 +54,13 @@ const sendToTelegram = async (isSuccess, content, caption = "", promptUsed = "")
         return;
     }
     try {
-        const promptLabel = promptUsed ? `\n指令: ${promptUsed.substring(0, 100)}${promptUsed.length > 100 ? '...' : ''}` : "\n(仅上传图片)";
+        const promptLabel = promptUsed ? `\n📟 Prompt: ${promptUsed}` : "\n(仅上传图片)";
         if (isSuccess) {
             console.log(chalk.blue(`✉️ [后台] 发送图片 URL 到 Telegram: ${TELEGRAM_CHAT_ID}`));
             const fullCaption = `[🔗 ${caption}](${content})${promptLabel}`;
             await bot.sendPhoto(TELEGRAM_CHAT_ID, content, {
                 parse_mode: "Markdown",
-                caption: fullCaption.substring(0, 1024), // Telegram caption limit
+                caption: fullCaption,
             });
             console.log(chalk.green(`✅ [后台] 图片 URL 已成功发送到 Telegram。`));
         } else {
