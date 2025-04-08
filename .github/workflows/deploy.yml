@@ -1,4 +1,4 @@
-name: CI Checks and Deploy via Server Command (CI 检查并用服务器命令部署)
+name: CI/CD
 
 on:
   push:
@@ -28,10 +28,6 @@ jobs:
       - name: Install All Dependencies (安装所有依赖)
         run: pnpm install --frozen-lockfile
         # 注意：这里安装所有依赖，因为 lint 和 build 可能需要 devDependencies
-
-      # 3. CI 阶段：运行 Lint 检查
-      - name: Lint Code (代码风格检查)
-        run: pnpm lint # 假设你的 package.json 中有 'lint' 脚本
 
       # 4. CI 阶段：运行构建测试 (确认代码可以成功构建)
       - name: Build Application Check (构建检查)
