@@ -23,6 +23,6 @@ export const defaultPrompts = {
     '请将这张图片中的猫咪模拟成人类。去除右下角文字，保持原来图像的长宽比',
   [PromptType.IRASUTOYA]:
     process.env.PROMPT_IRASUTOYA ||
-    '生成日本小人（irasutoy）风格，不要右下角文字，保持原来图像的长宽比',
+    '生成日本小人(类似于irasutoyo)风格，不要右下角文字，保持原来图像的长宽比',
   // CUSTOM and NONE types do not have default prompts defined here.
 };

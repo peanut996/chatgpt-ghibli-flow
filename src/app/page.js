@@ -11,7 +11,6 @@ const promptOptionsUI = [
 ];
 const DEFAULT_PROMPT_TYPE = 'ghibli';
 
-// Simple email validation regex
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isValidEmail = (email) => EMAIL_REGEX.test(email);
 
@@ -23,9 +22,10 @@ export default function HomePage() {
   const [selectedPromptType, setSelectedPromptType] =
     useState(DEFAULT_PROMPT_TYPE);
   const [customPromptText, setCustomPromptText] = useState('');
-  const [email, setEmail] = useState(''); // <-- New state for email
+  const [email, setEmail] = useState('');
   const router = useRouter();
 
+  // --- Handler functions (handleFileChange, handlePromptTypeChange, handleSubmit) remain the same ---
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -52,7 +52,7 @@ export default function HomePage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setError(''); // Clear previous errors
+    setError('');
 
     if (!selectedFile) {
       setError('请先选择一个图片文件。');
@@ -62,12 +62,10 @@ export default function HomePage() {
       setError('选择自定义 Prompt 时，请输入内容。');
       return;
     }
-    // --- New Email Validation ---
     if (email && !isValidEmail(email)) {
       setError('请输入有效的邮箱地址。');
       return;
     }
-    // --- End Email Validation ---
 
     setIsLoading(true);
     const formData = new FormData();
@@ -76,11 +74,9 @@ export default function HomePage() {
     if (selectedPromptType === 'custom') {
       formData.append('customPromptText', customPromptText);
     }
-    // --- Append Email if provided ---
     if (email) {
       formData.append('email', email);
     }
-    // --- End Append Email ---
 
     try {
       const response = await fetch('/api/process-image', {
@@ -92,9 +88,7 @@ export default function HomePage() {
         throw new Error(result.error || `HTTP 错误！状态: ${response.status}`);
       }
       if (result.success) {
-        // Optionally show a success message with email notice
-        // alert(`任务已提交！结果将发送到 Telegram ${email ? `和邮箱 ${email}` : ''}。`);
-        router.push('/success'); // Redirect on success
+        router.push('/success');
         return;
       } else {
         throw new Error(result.error || '上传请求失败，请重试。');
@@ -104,16 +98,16 @@ export default function HomePage() {
       const errorMessage = err instanceof Error ? err.message : String(err);
       setError(`❌ 处理时发生错误: ${errorMessage}`);
     } finally {
-      // Keep loading false setting here if redirect doesn't happen on error
       setIsLoading(false);
     }
   };
+  // --- End Handler functions ---
 
   const isSubmitDisabled =
     !selectedFile ||
     isLoading ||
     (selectedPromptType === 'custom' && !customPromptText.trim()) ||
-    (email && !isValidEmail(email)); // Disable if email is entered but invalid
+    (email && !isValidEmail(email));
 
   return (
     <main className="container mx-auto flex min-h-screen flex-col items-center px-4 py-12 md:py-16">
@@ -125,13 +119,15 @@ export default function HomePage() {
         onSubmit={handleSubmit}
         className="mb-10 w-full max-w-xl rounded-2xl border border-gray-200/80 bg-white p-8 shadow-xl md:p-10"
       >
-        {/* 1. File Input */}
+        {/* --- Section 1: Image Upload --- */}
         <div className="mb-6">
+          {' '}
+          {/* Keep margin bottom for spacing within section */}
           <label
             htmlFor="imageUpload"
             className="mb-2 block text-sm font-medium text-gray-700"
           >
-            1. 选择图片 (JPG/PNG)
+            选择图片 (JPG/PNG)
           </label>
           <input
             type="file"
@@ -142,14 +138,18 @@ export default function HomePage() {
             className={`block w-full cursor-pointer rounded-lg border border-gray-300 text-sm text-gray-600 transition-colors duration-200 file:mr-4 file:rounded-l-md file:border-0 file:bg-indigo-50 file:px-5 file:py-2.5 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none ${isLoading ? 'cursor-not-allowed opacity-60' : ''}`}
           />
         </div>
-
-        {/* 2. Prompt Type Selection */}
+        {/* --- Divider --- */}
+        <hr className="my-8 border-t border-gray-200" />{' '}
+        {/* Increased margin */}
+        {/* --- Section 2: Prompt Configuration --- */}
         <div className="mb-6">
+          {' '}
+          {/* Group prompt type and custom text */}
           <label
             htmlFor="promptTypeSelect"
             className="mb-2 block text-sm font-medium text-gray-700"
           >
-            2. 选择处理类型
+            选择处理类型
           </label>
           <select
             id="promptTypeSelect"
@@ -169,15 +169,15 @@ export default function HomePage() {
             ))}
           </select>
         </div>
-
-        {/* 3. Custom Prompt Textarea (Conditional) */}
+        {/* Custom Prompt Textarea (Conditional, part of Prompt Config section) */}
         {selectedPromptType === 'custom' && (
+          // Add margin bottom only if this section appears
           <div className="mb-6 transition-all duration-300 ease-in-out">
             <label
               htmlFor="customPromptText"
               className="mb-2 block text-sm font-medium text-gray-700"
             >
-              3. 输入自定义 Prompt
+              输入自定义 Prompt
             </label>
             <textarea
               id="customPromptText"
@@ -194,14 +194,17 @@ export default function HomePage() {
             />
           </div>
         )}
-
-        {/* --- NEW: 4. Email Input (Optional) --- */}
+        {/* --- Divider --- */}
+        <hr className="my-8 border-t border-gray-200" />
+        {/* --- Section 3: Notifications --- */}
         <div className="mb-6">
+          {' '}
+          {/* Keep margin bottom for spacing */}
           <label
             htmlFor="emailInput"
             className="mb-2 block text-sm font-medium text-gray-700"
           >
-            4. (可选) 接收结果邮箱
+            接收结果邮箱 <span className="text-xs text-gray-500">(可选)</span>
           </label>
           <input
             type="email"
@@ -220,11 +223,10 @@ export default function HomePage() {
             <p className="mt-1 text-xs text-red-600">请输入有效的邮箱格式。</p>
           )}
         </div>
-        {/* --- End Email Input --- */}
-
-        {/* Image Preview */}
+        {/* Image Preview (Doesn't need its own section marker) */}
         {previewUrl && !isLoading && (
-          <div className="mt-4 mb-8 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 transition-all duration-300 ease-in-out">
+          // Add margin top to separate from email input if preview is shown
+          <div className="mt-8 mb-8 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 transition-all duration-300 ease-in-out">
             <p className="mb-3 text-center text-sm font-semibold text-gray-700">
               图片预览:
             </p>
@@ -235,12 +237,12 @@ export default function HomePage() {
             />
           </div>
         )}
-
-        {/* Submit Button */}
+        {/* Submit Button (Clear visual end) */}
+        {/* Add margin top to separate from last element (email or preview) */}
         <button
           type="submit"
           disabled={isSubmitDisabled}
-          className={`focus:ring-opacity-50 w-full transform rounded-lg px-6 py-3 font-semibold text-white transition-all duration-300 ease-in-out hover:scale-[1.02] focus:ring-4 focus:ring-indigo-500 focus:outline-none ${
+          className={`focus:ring-opacity-50 mt-8 w-full transform rounded-lg px-6 py-3 font-semibold text-white transition-all duration-300 ease-in-out hover:scale-[1.02] focus:ring-4 focus:ring-indigo-500 focus:outline-none ${
             isSubmitDisabled
               ? 'cursor-not-allowed bg-gray-400'
               : 'bg-indigo-600 shadow-md hover:bg-indigo-700 hover:shadow-lg'
