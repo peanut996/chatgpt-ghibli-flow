@@ -12,45 +12,47 @@ The project utilizes the `p-queue` library to ensure that only one image process
 
 ## Key Features
 
-*   **Web Upload Interface:** Provides a simple and intuitive interface for users to select and upload JPG/PNG images.
-*   **ChatGPT Automation:** Uses `puppeteer-extra` with the `stealth` plugin to mimic human interaction, log in, and interact with `chatgpt.com`.
-*   **Fixed Style Conversion:** Applies a preset Chinese prompt to the uploaded image, asking ChatGPT to generate a Ghibli-style image, attempting to remove watermarks and maintain the aspect ratio.
-*   **Telegram Result Notification:** Sends the successfully generated image URL or any processing errors to the configured Telegram chat.
-*   **Task Queue:** Processes upload requests sequentially, ensuring stability and efficient resource usage.
-*   **Environment Configuration:** Flexibly configure key parameters (like Cookies path, proxy, Telegram Token, etc.) via environment variables.
+- **Web Upload Interface:** Provides a simple and intuitive interface for users to select and upload JPG/PNG images.
+- **ChatGPT Automation:** Uses `puppeteer-extra` with the `stealth` plugin to mimic human interaction, log in, and interact with `chatgpt.com`.
+- **Fixed Style Conversion:** Applies a preset Chinese prompt to the uploaded image, asking ChatGPT to generate a Ghibli-style image, attempting to remove watermarks and maintain the aspect ratio.
+- **Telegram Result Notification:** Sends the successfully generated image URL or any processing errors to the configured Telegram chat.
+- **Task Queue:** Processes upload requests sequentially, ensuring stability and efficient resource usage.
+- **Environment Configuration:** Flexibly configure key parameters (like Cookies path, proxy, Telegram Token, etc.) via environment variables.
 
 ## Technology Stack
 
-*   **Frontend:** Next.js (App Router), React, Tailwind CSS
-*   **Backend API:** Next.js API Routes
-*   **Browser Automation:** Puppeteer-Extra, puppeteer-extra-plugin-stealth
-*   **Notifications:** node-telegram-bot-api
-*   **Queue Management:** p-queue
-*   **Package Manager:** pnpm
-*   **Others:** Chalk (console output styling), dotenv (environment variable management)
+- **Frontend:** Next.js (App Router), React, Tailwind CSS
+- **Backend API:** Next.js API Routes
+- **Browser Automation:** Puppeteer-Extra, puppeteer-extra-plugin-stealth
+- **Notifications:** node-telegram-bot-api
+- **Queue Management:** p-queue
+- **Package Manager:** pnpm
+- **Others:** Chalk (console output styling), dotenv (environment variable management)
 
 ## Prerequisites
 
-*   Node.js (Recommended version ^18.18.0 || ^19.8.0 || >= 20.0.0, based on Next.js requirements)
-*   pnpm package manager
-*   A valid `cookies.json` file containing cookies for logging into `chatgpt.com`.
-*   A Telegram Bot Token and the Chat ID to receive results.
+- Node.js (Recommended version ^18.18.0 || ^19.8.0 || >= 20.0.0, based on Next.js requirements)
+- pnpm package manager
+- A valid `cookies.json` file containing cookies for logging into `chatgpt.com`.
+- A Telegram Bot Token and the Chat ID to receive results.
 
 ## Installation and Setup
 
 1.  **Clone the repository:**
+
 ```bash
 git clone <your-repository-url>
 cd chatgpt-ghibli-flow
 ```
 
 2.  **Install dependencies:**
+
 ```bash
 pnpm install
 ```
 
 3.  **Configure Environment Variables:**
-Create a file named `.env.local` in the project root directory and fill in the necessary environment variables:
+    Create a file named `.env.local` in the project root directory and fill in the necessary environment variables:
 
 ```dotenv
 # --- Core Configuration ---
@@ -85,27 +87,34 @@ GENERATION_TIMEOUT=240000
 ```
 
 4.  **Place the Cookies File:**
-Obtain the cookies after logging into `chatgpt.com` and save them as a JSON array in a file. Place this file at the path specified by `COOKIES_FILE_PATH` in `.env.local` (defaults to `cookies.json` in the project root).
-*   **Important:** Cookies expire and need to be updated periodically. You can use browser developer tools or extensions (like EditThisCookie) to export cookies. Ensure the exported format is a JSON array.
+    Obtain the cookies after logging into `chatgpt.com` and save them as a JSON array in a file. Place this file at the path specified by `COOKIES_FILE_PATH` in `.env.local` (defaults to `cookies.json` in the project root).
+
+- **Important:** Cookies expire and need to be updated periodically. You can use browser developer tools or extensions (like EditThisCookie) to export cookies. Ensure the exported format is a JSON array.
 
 ## Running the Application
 
-*   **Development Mode:**
+- **Development Mode:**
+
 ```bash
 pnpm dev
 ```
+
 Open `http://localhost:3000` in your browser.
 
-*   **Build for Production:**
+- **Build for Production:**
+
 ```bash
 pnpm build
 ```
 
-*   **Run Production Build:**
+- **Run Production Build:**
+
 ```bash
 pnpm start
 ```
+
 Alternatively, use PM2 for process management (recommended for server deployment):
+
 ```bash
 pm2 start ecosystem.config.cjs
 ```
@@ -116,19 +125,20 @@ pm2 start ecosystem.config.cjs
 2.  The frontend POSTs the image to the `/api/process-image` API route.
 3.  The API route receives the file, saves it temporarily, and adds a processing task (temporary file path and original filename) to the `p-queue`.
 4.  The queue executes tasks sequentially:
-*   Launches or reuses a Puppeteer browser instance.
-*   Loads `cookies.json` to access `chatgpt.com` in a logged-in state.
-*   Uploads the temporary image file within the ChatGPT interface.
-*   Enters the predefined prompt (`请将这张图片转换为吉卜力风格...`) and submits it.
-*   Waits for ChatGPT to process and generate the resulting image.
-*   Extracts the URL of the generated image.
-*   Uses the Telegram Bot to send the image URL to the specified Chat ID.
-*   If an error occurs at any step, sends the error message to Telegram.
-*   Closes the Puppeteer page and deletes the temporary file after processing.
+
+- Launches or reuses a Puppeteer browser instance.
+- Loads `cookies.json` to access `chatgpt.com` in a logged-in state.
+- Uploads the temporary image file within the ChatGPT interface.
+- Enters the predefined prompt (`请将这张图片转换为吉卜力风格...`) and submits it.
+- Waits for ChatGPT to process and generate the resulting image.
+- Extracts the URL of the generated image.
+- Uses the Telegram Bot to send the image URL to the specified Chat ID.
+- If an error occurs at any step, sends the error message to Telegram.
+- Closes the Puppeteer page and deletes the temporary file after processing.
 
 ## Deployment Notes
 
-*   **Puppeteer Environment:** Deployment on Serverless platforms like Vercel can be challenging, as Puppeteer requires a full browser environment. Self-hosting on a VPS or a platform supporting Docker is recommended.
-*   **Resource Consumption:** Running a browser instance with Puppeteer consumes significant CPU and memory resources.
-*   **Cookie Expiration:** The `cookies.json` file needs to be updated manually on a regular basis; otherwise, the automation will fail due to being logged out.
-*   **PM2:** The project includes an `ecosystem.config.cjs` file for easy process management and daemonization on a server using PM2.
+- **Puppeteer Environment:** Deployment on Serverless platforms like Vercel can be challenging, as Puppeteer requires a full browser environment. Self-hosting on a VPS or a platform supporting Docker is recommended.
+- **Resource Consumption:** Running a browser instance with Puppeteer consumes significant CPU and memory resources.
+- **Cookie Expiration:** The `cookies.json` file needs to be updated manually on a regular basis; otherwise, the automation will fail due to being logged out.
+- **PM2:** The project includes an `ecosystem.config.cjs` file for easy process management and daemonization on a server using PM2.

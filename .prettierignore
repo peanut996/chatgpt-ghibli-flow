@@ -1,0 +1,27 @@
+# Dependencies
+node_modules
+.pnp.*
+.yarn/*
+
+# Build artifacts
+.next/
+out/
+build/
+coverage/
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Config / Data / Secrets (that shouldn't be formatted)
+.env*
+cookies.json
+*.tsbuildinfo
+
+# Misc
+.DS_Store
+*.pem
+*.log
+.vercel
+.idea
