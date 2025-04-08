@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-// Keep prompt options definition
 const promptOptionsUI = [
   { type: 'ghibli', label: '吉卜力风格 (Ghibli Style)' },
   { type: 'cat-human', label: '猫咪拟人化 (Cats as Humans)' },
@@ -11,6 +10,10 @@ const promptOptionsUI = [
   { type: 'custom', label: '自定义 Prompt (Custom)' },
 ];
 const DEFAULT_PROMPT_TYPE = 'ghibli';
+
+// Simple email validation regex
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isValidEmail = (email) => EMAIL_REGEX.test(email);
 
 export default function HomePage() {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -20,9 +23,9 @@ export default function HomePage() {
   const [selectedPromptType, setSelectedPromptType] =
     useState(DEFAULT_PROMPT_TYPE);
   const [customPromptText, setCustomPromptText] = useState('');
+  const [email, setEmail] = useState(''); // <-- New state for email
   const router = useRouter();
 
-  // Keep existing handler functions (handleFileChange, handlePromptTypeChange, handleSubmit)
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -49,6 +52,8 @@ export default function HomePage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setError(''); // Clear previous errors
+
     if (!selectedFile) {
       setError('请先选择一个图片文件。');
       return;
@@ -57,14 +62,26 @@ export default function HomePage() {
       setError('选择自定义 Prompt 时，请输入内容。');
       return;
     }
+    // --- New Email Validation ---
+    if (email && !isValidEmail(email)) {
+      setError('请输入有效的邮箱地址。');
+      return;
+    }
+    // --- End Email Validation ---
+
     setIsLoading(true);
-    setError('');
     const formData = new FormData();
     formData.append('image', selectedFile);
     formData.append('promptType', selectedPromptType);
     if (selectedPromptType === 'custom') {
       formData.append('customPromptText', customPromptText);
     }
+    // --- Append Email if provided ---
+    if (email) {
+      formData.append('email', email);
+    }
+    // --- End Append Email ---
+
     try {
       const response = await fetch('/api/process-image', {
         method: 'POST',
@@ -75,7 +92,9 @@ export default function HomePage() {
         throw new Error(result.error || `HTTP 错误！状态: ${response.status}`);
       }
       if (result.success) {
-        router.push('/success');
+        // Optionally show a success message with email notice
+        // alert(`任务已提交！结果将发送到 Telegram ${email ? `和邮箱 ${email}` : ''}。`);
+        router.push('/success'); // Redirect on success
         return;
       } else {
         throw new Error(result.error || '上传请求失败，请重试。');
@@ -83,7 +102,9 @@ export default function HomePage() {
     } catch (err) {
       console.error('上传错误:', err);
       const errorMessage = err instanceof Error ? err.message : String(err);
-      setError(`❌ 处理时发生错误: ${errorMessage}`); // Slightly improved error prefix
+      setError(`❌ 处理时发生错误: ${errorMessage}`);
+    } finally {
+      // Keep loading false setting here if redirect doesn't happen on error
       setIsLoading(false);
     }
   };
@@ -91,22 +112,20 @@ export default function HomePage() {
   const isSubmitDisabled =
     !selectedFile ||
     isLoading ||
-    (selectedPromptType === 'custom' && !customPromptText.trim());
+    (selectedPromptType === 'custom' && !customPromptText.trim()) ||
+    (email && !isValidEmail(email)); // Disable if email is entered but invalid
 
   return (
-    // Use flex to center content vertically and ensure min height
     <main className="container mx-auto flex min-h-screen flex-col items-center px-4 py-12 md:py-16">
-      {/* Enhanced Title */}
       <h1 className="mb-10 text-center text-4xl font-bold tracking-tight text-gray-800 md:text-5xl">
         🎨 GhibliFlow Studio 🎨
       </h1>
 
-      {/* Enhanced Form Styling */}
       <form
         onSubmit={handleSubmit}
         className="mb-10 w-full max-w-xl rounded-2xl border border-gray-200/80 bg-white p-8 shadow-xl md:p-10"
       >
-        {/* File Input Section */}
+        {/* 1. File Input */}
         <div className="mb-6">
           <label
             htmlFor="imageUpload"
@@ -120,12 +139,11 @@ export default function HomePage() {
             accept=".jpg, .jpeg, .png"
             onChange={handleFileChange}
             disabled={isLoading}
-            // Enhanced file input styling
             className={`block w-full cursor-pointer rounded-lg border border-gray-300 text-sm text-gray-600 transition-colors duration-200 file:mr-4 file:rounded-l-md file:border-0 file:bg-indigo-50 file:px-5 file:py-2.5 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none ${isLoading ? 'cursor-not-allowed opacity-60' : ''}`}
           />
         </div>
 
-        {/* Prompt Type Selection */}
+        {/* 2. Prompt Type Selection */}
         <div className="mb-6">
           <label
             htmlFor="promptTypeSelect"
@@ -138,7 +156,6 @@ export default function HomePage() {
             value={selectedPromptType}
             onChange={handlePromptTypeChange}
             disabled={isLoading}
-            // Enhanced select styling
             className={`block w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-800 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none sm:text-sm ${
               isLoading
                 ? 'cursor-not-allowed bg-gray-100 opacity-60'
@@ -153,11 +170,9 @@ export default function HomePage() {
           </select>
         </div>
 
-        {/* Custom Prompt Textarea (Conditional) */}
+        {/* 3. Custom Prompt Textarea (Conditional) */}
         {selectedPromptType === 'custom' && (
           <div className="mb-6 transition-all duration-300 ease-in-out">
-            {' '}
-            {/* Added transition */}
             <label
               htmlFor="customPromptText"
               className="mb-2 block text-sm font-medium text-gray-700"
@@ -166,12 +181,11 @@ export default function HomePage() {
             </label>
             <textarea
               id="customPromptText"
-              rows={4} // Slightly taller
+              rows={4}
               value={customPromptText}
               onChange={(e) => setCustomPromptText(e.target.value)}
               disabled={isLoading}
               placeholder="在此处输入你希望使用的 Prompt..."
-              // Enhanced textarea styling
               className={`block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-800 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none sm:text-sm ${
                 isLoading
                   ? 'cursor-not-allowed bg-gray-100 opacity-60'
@@ -181,18 +195,42 @@ export default function HomePage() {
           </div>
         )}
 
+        {/* --- NEW: 4. Email Input (Optional) --- */}
+        <div className="mb-6">
+          <label
+            htmlFor="emailInput"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
+            4. (可选) 接收结果邮箱
+          </label>
+          <input
+            type="email"
+            id="emailInput"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={isLoading}
+            placeholder="your.email@example.com"
+            className={`block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-800 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none sm:text-sm ${
+              isLoading
+                ? 'cursor-not-allowed bg-gray-100 opacity-60'
+                : 'hover:border-gray-400'
+            } ${email && !isValidEmail(email) ? 'border-red-500 ring-red-500' : ''}`} // Highlight if invalid
+          />
+          {email && !isValidEmail(email) && (
+            <p className="mt-1 text-xs text-red-600">请输入有效的邮箱格式。</p>
+          )}
+        </div>
+        {/* --- End Email Input --- */}
+
         {/* Image Preview */}
         {previewUrl && !isLoading && (
           <div className="mt-4 mb-8 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 transition-all duration-300 ease-in-out">
-            {' '}
-            {/* Added transition */}
             <p className="mb-3 text-center text-sm font-semibold text-gray-700">
               图片预览:
             </p>
             <img
               src={previewUrl}
               alt="已选图片预览"
-              // Enhanced preview image style
               className="mx-auto h-auto max-h-48 max-w-full rounded-md object-contain shadow-md md:max-h-60"
             />
           </div>
@@ -202,16 +240,15 @@ export default function HomePage() {
         <button
           type="submit"
           disabled={isSubmitDisabled}
-          // Enhanced button styling
           className={`focus:ring-opacity-50 w-full transform rounded-lg px-6 py-3 font-semibold text-white transition-all duration-300 ease-in-out hover:scale-[1.02] focus:ring-4 focus:ring-indigo-500 focus:outline-none ${
             isSubmitDisabled
               ? 'cursor-not-allowed bg-gray-400'
               : 'bg-indigo-600 shadow-md hover:bg-indigo-700 hover:shadow-lg'
           }`}
         >
-          {/* Conditional text based on loading state */}
           {isLoading ? (
             <div className="flex items-center justify-center space-x-2">
+              {/* Spinner SVG */}
               <svg
                 className="h-5 w-5 animate-spin text-white"
                 xmlns="http://www.w3.org/2000/svg"
@@ -236,19 +273,15 @@ export default function HomePage() {
             </div>
           ) : (
             '上传并开始处理 ✨'
-          )}{' '}
-          {/* Added emoji */}
+          )}
         </button>
       </form>
 
-      {/* Status Area - Below form for better flow */}
+      {/* Status Area */}
       <div className="mt-0 w-full max-w-xl text-center">
-        {' '}
-        {/* Reduced top margin */}
-        {/* Error Message */}
         {error && (
-          // Enhanced error message styling
           <div className="mb-6 flex items-center justify-center space-x-2 rounded-lg border border-red-300 bg-red-100 p-4 text-sm text-red-800 shadow md:text-base">
+            {/* Error Icon SVG */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-5 w-5 text-red-600"
@@ -264,16 +297,6 @@ export default function HomePage() {
             <p>{error}</p>
           </div>
         )}
-        {/* Loading Indicator - Now inside the button, so this separate one might be redundant unless showing queue status */}
-        {/* {isLoading && (
-              <div className="flex justify-center items-center space-x-2 mt-6">
-                <svg className="animate-spin h-6 w-6 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span className="text-gray-700 text-lg font-medium">正在处理，请稍候...</span>
-              </div>
-          )} */}
       </div>
     </main>
   );
