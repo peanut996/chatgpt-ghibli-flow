@@ -3,7 +3,7 @@ name: CI Checks and Deploy via Server Command (CI 检查并用服务器命令部
 on:
   push:
     branches:
-      - main # 当推送到 main 分支时触发
+      - master # 当推送到 main 分支时触发
 
 jobs:
   ci-check-and-deploy:
