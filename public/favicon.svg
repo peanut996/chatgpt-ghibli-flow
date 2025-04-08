@@ -1,0 +1,10 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Paintbrush Handle -->
+  <rect x="26" y="30" width="12" height="30" rx="3" fill="#A0522D"/>
+  <!-- Metal Ferrule -->
+  <rect x="24" y="24" width="16" height="8" fill="#C0C0C0"/>
+  <!-- Bristles (simple rounded shape) -->
+  <path d="M24 25 C 24 15, 40 15, 40 25 Z" fill="#5C3A21"/>
+  <!-- Ghibli-style Sparkle (4-point) -->
+  <path d="M46 12 L48.5 19 L56 21 L48.5 23 L46 30 L43.5 23 L36 21 L43.5 19 Z" fill="#FFD700"/>
+</svg>
