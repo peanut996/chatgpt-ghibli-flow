@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 const promptOptionsUI = [
@@ -23,28 +23,92 @@ export default function HomePage() {
     useState(DEFAULT_PROMPT_TYPE);
   const [customPromptText, setCustomPromptText] = useState('');
   const [email, setEmail] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const router = useRouter();
+  const dropdownRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  const handleFileChange = (event) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setError('');
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result);
-      };
-      reader.readAsDataURL(file);
-    } else {
+  // 处理剪贴板粘贴的事件监听
+  useEffect(() => {
+    const handlePaste = (event) => {
+      const items = event.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const file = items[i].getAsFile();
+          processFile(file);
+          event.preventDefault();
+          return;
+        }
+      }
+
+      // 如果不是图片，显示错误
+      if (items.length > 0 && !isLoading) {
+        setError('请粘贴图片文件，不支持其他类型的文件。');
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+
+    // 点击外部关闭下拉菜单
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      window.removeEventListener('paste', handlePaste);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isLoading]);
+
+  // 处理文件验证和预览
+  const processFile = (file) => {
+    if (!file) {
       setSelectedFile(null);
       setPreviewUrl('');
       setError('');
+      return;
+    }
+
+    // 验证文件是否为图片
+    if (!file.type.match('image.*')) {
+      setError('只支持上传图片文件 (.jpg, .jpeg, .png)');
+      return;
+    }
+
+    setSelectedFile(file);
+    setError('');
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewUrl(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    processFile(file);
+  };
+
+  const resetFileSelection = () => {
+    setSelectedFile(null);
+    setPreviewUrl('');
+    // 重置文件输入以允许选择相同的文件
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
-  const handlePromptTypeChange = (event) => {
-    setSelectedPromptType(event.target.value);
-    if (event.target.value !== 'custom' && error.includes('自定义 Prompt')) {
+  const handlePromptTypeChange = (value) => {
+    setSelectedPromptType(value);
+    setDropdownOpen(false);
+    if (value !== 'custom' && error.includes('自定义 Prompt')) {
       setError('');
     }
   };
@@ -101,11 +165,22 @@ export default function HomePage() {
     }
   };
 
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
   const isSubmitDisabled =
     !selectedFile ||
     isLoading ||
     (selectedPromptType === 'custom' && !customPromptText.trim()) ||
     (email && !isValidEmail(email));
+
+  // 格式化文件大小
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    else return (bytes / 1048576).toFixed(1) + ' MB';
+  };
 
   return (
     // 高级质感背景 - 精致的渐变和纹理
@@ -125,7 +200,7 @@ export default function HomePage() {
             '15px 15px 30px rgba(200, 204, 213, 0.3), -15px -15px 30px rgba(255, 255, 255, 0.8)',
         }}
       >
-        {/* --- 第1部分: 图片上传 (高级嵌入式面板) --- */}
+        {/* --- 第1部分: 图片上传 (高级嵌入式面板) 支持拖放和粘贴 --- */}
         <div
           className="mb-8 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 p-7 transition-all duration-300 ease-in-out"
           style={{
@@ -139,20 +214,134 @@ export default function HomePage() {
           >
             选择图片
           </label>
+
+          {/* 隐藏原始文件输入 */}
           <input
             type="file"
             id="imageUpload"
-            accept=".jpg, .jpeg, .png"
+            ref={fileInputRef}
+            accept="image/jpeg, image/jpg, image/png"
             onChange={handleFileChange}
             disabled={isLoading}
-            className={`block w-full cursor-pointer rounded-xl border-none bg-gray-50 px-5 py-3.5 text-sm text-gray-700 transition-all duration-300 ease-in-out file:mr-4 file:rounded-xl file:border-0 file:bg-gradient-to-r file:from-indigo-100 file:to-indigo-200 file:px-5 file:py-2.5 file:text-sm file:font-semibold file:text-indigo-700 hover:file:from-indigo-200 hover:file:to-indigo-300 focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2 focus:ring-offset-gray-50 focus:outline-none ${
-              isLoading ? 'cursor-not-allowed opacity-60' : ''
-            }`}
-            style={{
-              boxShadow:
-                'inset 3px 3px 6px rgba(200, 204, 213, 0.5), inset -3px -3px 6px rgba(255, 255, 255, 0.8)',
-            }}
+            className="hidden"
           />
+
+          {/* 自定义上传区域 - 未选择文件时显示上传区域，选择文件后显示预览和文件信息 */}
+          {!selectedFile ? (
+            <div
+              onClick={triggerFileInput}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!isLoading) {
+                  const file = e.dataTransfer.files[0];
+                  processFile(file);
+                }
+              }}
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-indigo-200 bg-gray-50 p-6 text-center transition-all duration-300 hover:border-indigo-300 hover:bg-gray-100 ${
+                isLoading ? 'cursor-not-allowed opacity-60' : ''
+              }`}
+              style={{
+                boxShadow:
+                  'inset 3px 3px 6px rgba(200, 204, 213, 0.5), inset -3px -3px 6px rgba(255, 255, 255, 0.8)',
+                minHeight: '120px',
+              }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="mb-2 h-10 w-10 text-indigo-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.5"
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+              <p className="mb-1 text-sm font-medium text-gray-700">
+                点击上传图片或拖放至此处
+              </p>
+              <p className="text-xs text-gray-500">支持 JPG, JPEG, PNG 格式</p>
+              <p className="mt-2 text-xs font-medium text-indigo-500">
+                也可以直接粘贴图片 (Ctrl+V)
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-xl bg-white p-4 shadow-md transition-all duration-300">
+              <div className="flex flex-col sm:flex-row">
+                {/* 预览图片 - 修复图片src为空的问题 */}
+                <div className="mb-4 flex-shrink-0 overflow-hidden rounded-lg sm:mr-4 sm:mb-0 sm:w-1/3">
+                  {previewUrl ? (
+                    <img
+                      src={previewUrl}
+                      alt="图片预览"
+                      className="h-32 w-full object-cover object-center sm:h-full"
+                    />
+                  ) : (
+                    <div className="flex h-32 w-full items-center justify-center bg-gray-100 sm:h-full">
+                      <span className="text-sm text-gray-500">无预览</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 文件信息 */}
+                <div className="flex flex-1 flex-col justify-between">
+                  <div>
+                    <h3 className="mb-1 line-clamp-1 text-sm font-medium text-gray-900">
+                      {selectedFile.name}
+                    </h3>
+                    <div className="space-y-1">
+                      <p className="text-xs text-gray-500">
+                        类型: {selectedFile.type.split('/')[1].toUpperCase()}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        大小: {formatFileSize(selectedFile.size)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 操作按钮 */}
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={resetFileSelection}
+                      disabled={isLoading}
+                      className={`flex items-center rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-medium text-indigo-600 shadow-sm transition-colors hover:bg-indigo-50 focus:ring-2 focus:ring-indigo-300 focus:outline-none ${
+                        isLoading ? 'cursor-not-allowed opacity-50' : ''
+                      }`}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="mr-1 h-3.5 w-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                      </svg>
+                      重新选择
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* --- 第2部分: Prompt配置 (高级嵌入式面板) --- */}
@@ -163,7 +352,7 @@ export default function HomePage() {
               '8px 8px 16px rgba(200, 204, 213, 0.4), -8px -8px 16px rgba(255, 255, 255, 0.9)',
           }}
         >
-          {/* Prompt类型选择 */}
+          {/* Prompt类型选择 - 重新设计的下拉框 */}
           <div className={`${selectedPromptType === 'custom' ? 'mb-5' : ''}`}>
             <label
               htmlFor="promptTypeSelect"
@@ -171,30 +360,32 @@ export default function HomePage() {
             >
               处理类型
             </label>
-            <div className="relative">
-              <select
-                id="promptTypeSelect"
-                value={selectedPromptType}
-                onChange={handlePromptTypeChange}
-                disabled={isLoading}
-                className={`block w-full appearance-none rounded-xl border-none bg-gray-50 px-5 py-3.5 text-gray-800 transition-all duration-300 ease-in-out focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2 focus:ring-offset-gray-50 focus:outline-none sm:text-sm ${
-                  isLoading ? 'cursor-not-allowed bg-gray-100 opacity-60' : ''
+
+            {/* 自定义下拉菜单 */}
+            <div className="relative" ref={dropdownRef}>
+              <div
+                onClick={() => !isLoading && setDropdownOpen(!dropdownOpen)}
+                className={`flex w-full cursor-pointer items-center justify-between rounded-xl border-none bg-gray-50 px-5 py-3.5 text-gray-800 transition-all duration-300 ease-in-out focus:outline-none ${
+                  isLoading
+                    ? 'cursor-not-allowed opacity-60'
+                    : 'hover:bg-gray-100'
                 }`}
                 style={{
                   boxShadow:
                     'inset 3px 3px 6px rgba(200, 204, 213, 0.5), inset -3px -3px 6px rgba(255, 255, 255, 0.8)',
                 }}
               >
-                {promptOptionsUI.map((option) => (
-                  <option key={option.type} value={option.type}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              {/* 自定义下拉箭头 */}
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-600">
+                <span className="block truncate text-sm">
+                  {
+                    promptOptionsUI.find(
+                      (option) => option.type === selectedPromptType,
+                    )?.label
+                  }
+                </span>
                 <svg
-                  className="h-4 w-4"
+                  className={`h-5 w-5 text-gray-600 transition-transform duration-300 ${
+                    dropdownOpen ? 'rotate-180 transform' : ''
+                  }`}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -207,6 +398,27 @@ export default function HomePage() {
                   />
                 </svg>
               </div>
+
+              {/* 下拉选项列表 */}
+              {dropdownOpen && (
+                <div
+                  className="ring-opacity-5 absolute z-10 mt-2 w-full origin-top-right rounded-xl bg-white py-2 shadow-lg ring-1 ring-black transition-all duration-300 ease-in-out"
+                  style={{
+                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+                    animation: 'fadeIn 0.2s ease-out forwards',
+                  }}
+                >
+                  {promptOptionsUI.map((option) => (
+                    <div
+                      key={option.type}
+                      onClick={() => handlePromptTypeChange(option.type)}
+                      className="block cursor-pointer px-5 py-2.5 text-sm text-gray-700 transition-colors duration-200 hover:bg-indigo-50 hover:text-indigo-700"
+                    >
+                      {option.label}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -273,42 +485,14 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* 图片预览 (精致的玻璃态效果) */}
-        {previewUrl && !isLoading && (
-          <div
-            className="mb-8 overflow-hidden rounded-2xl border border-white/30 bg-white/20 p-5 backdrop-blur-sm transition-all duration-500 ease-in-out"
-            style={{
-              boxShadow:
-                '8px 8px 16px rgba(200, 204, 213, 0.3), -8px -8px 16px rgba(255, 255, 255, 0.7)',
-            }}
-          >
-            <p className="mb-3 text-center text-sm font-semibold text-gray-700">
-              图片预览:
-            </p>
-            <div
-              className="overflow-hidden rounded-xl"
-              style={{
-                boxShadow:
-                  'inset 2px 2px 5px rgba(200, 204, 213, 0.4), inset -2px -2px 5px rgba(255, 255, 255, 0.7)',
-              }}
-            >
-              <img
-                src={previewUrl}
-                alt="已选图片预览"
-                className="mx-auto h-auto max-h-48 max-w-full rounded-lg object-contain p-2 md:max-h-60"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* 提交按钮 (高级浮雕效果) */}
+        {/* 提交按钮 (高级浮雕效果) - 修复了scale-98问题 */}
         <button
           type="submit"
           disabled={isSubmitDisabled}
           className={`w-full transform rounded-xl border-none px-6 py-4 font-semibold text-white transition-all duration-300 ease-in-out focus:ring-2 focus:ring-indigo-400/50 focus:ring-offset-2 focus:ring-offset-gray-50 focus:outline-none ${
             isSubmitDisabled
               ? 'bg-opacity-70 cursor-not-allowed bg-gray-300 text-gray-500'
-              : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 active:scale-98'
+              : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 active:scale-95 active:transform'
           }`}
           style={{
             boxShadow: isSubmitDisabled
@@ -375,6 +559,27 @@ export default function HomePage() {
           </div>
         )}
       </div>
+
+      {/* 添加CSS动画 */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .line-clamp-1 {
+          display: -webkit-box;
+          -webkit-line-clamp: 1;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+      `}</style>
     </main>
   );
 }

@@ -74,7 +74,7 @@ const SuccessPage = () => {
           }}
         >
           <p>我们将尽快处理您的图片</p>
-          <p className="mt-2 text-xs text-gray-500">通常在5-30分钟内完成</p>
+          <p className="mt-2 text-xs text-gray-500">这通常在5-30分钟内完成</p>
         </div>
       </div>
     </main>
