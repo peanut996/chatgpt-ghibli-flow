@@ -1,0 +1,61 @@
+name: CI Checks and Deploy via Server Command (CI 检查并用服务器命令部署)
+
+on:
+  push:
+    branches:
+      - main # 当推送到 main 分支时触发
+
+jobs:
+  ci-check-and-deploy:
+    runs-on: ubuntu-latest # CI 检查和部署触发都在同一个运行器上执行
+
+    steps:
+      # 1. CI 阶段：代码检出和环境准备
+      - name: Checkout Code (检出代码)
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (设置 Node.js 环境)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # 根据你的 .nvmrc 文件设置
+          cache: 'pnpm' # 启用 pnpm 缓存
+
+      - name: Setup PNPM (设置 PNPM)
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest # 使用最新版 pnpm 或指定版本
+
+      # 2. CI 阶段：安装所有依赖 (包括 devDependencies 用于检查)
+      - name: Install All Dependencies (安装所有依赖)
+        run: pnpm install --frozen-lockfile
+        # 注意：这里安装所有依赖，因为 lint 和 build 可能需要 devDependencies
+
+      # 3. CI 阶段：运行 Lint 检查
+      - name: Lint Code (代码风格检查)
+        run: pnpm lint # 假设你的 package.json 中有 'lint' 脚本
+
+      # 4. CI 阶段：运行构建测试 (确认代码可以成功构建)
+      - name: Build Application Check (构建检查)
+        run: pnpm build
+        # 注意：这里的构建只是为了检查代码是否能成功构建。
+        # 实际部署到服务器时，你的 DEPLOY_COMMAND 秘密里仍然包含服务器端的构建步骤。
+
+      # --- 可选：运行测试 ---
+      # - name: Run Tests (运行测试)
+      #   run: pnpm test # 假设你的 package.json 中有 'test' 脚本
+
+      # 5. CD 阶段：仅当所有 CI 步骤成功后才执行部署
+      - name: Execute Deployment Command on Server (在服务器上执行部署命令)
+        # 关键：只有前面的步骤都成功 (success()) 时才执行此步骤
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || '22' }}
+          script: |
+            echo "CI 检查通过。正在连接到服务器并执行部署命令..."
+            # 执行存储在 Secret 中的命令
+            ${{ secrets.DEPLOY_COMMAND }}
+            echo "服务器命令执行完毕。"
+      # 如果 CI 步骤失败，Action 会在这里停止，不会执行部署步骤
