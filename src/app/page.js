@@ -274,7 +274,7 @@ export default function HomePage() {
               </p>
               <p className="text-xs text-gray-500">支持 JPG, JPEG, PNG 格式</p>
               <p className="mt-2 text-xs font-medium text-indigo-500">
-                也可以直接粘贴图片 (Ctrl+V)
+                也可以直接粘贴图片 (Cmd+V)
               </p>
             </div>
           ) : (
