@@ -1,5 +1,5 @@
-<p style="text-align: center">
-<a href="README.md">中文</a> ｜ English
+<p align="center">
+<br> <a href="README.md">中文</a> ｜ English
 </p>
 
 # GhibliFlow Image Generator
@@ -24,7 +24,7 @@ The project utilizes the `p-queue` library to ensure that only one image process
 - **Frontend:** Next.js (App Router), React, Tailwind CSS
 - **Backend API:** Next.js API Routes
 - **Browser Automation:** Puppeteer-Extra, puppeteer-extra-plugin-stealth
-- **Notifications:** node-telegram-bot-api
+- **Notifications:** node-telegram-bot-api, nodemailer
 - **Queue Management:** p-queue
 - **Package Manager:** pnpm
 - **Others:** Chalk (console output styling), dotenv (environment variable management)

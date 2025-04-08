@@ -1,5 +1,5 @@
-<p style="text-align: center">
-中文 ｜ <a href="README_EN.md">English</a>
+<p align="center">
+<br> 中文 ｜ <a href="README_EN.md">English</a>
 </p>
 
 # GhibliFlow Image Generator / 吉卜力风格图像生成器
@@ -24,7 +24,7 @@
 - **前端:** Next.js (App Router), React, Tailwind CSS
 - **后端 API:** Next.js API Routes
 - **浏览器自动化:** Puppeteer-Extra, puppeteer-extra-plugin-stealth
-- **通知:** node-telegram-bot-api
+- **通知:** node-telegram-bot-api, nodemailer
 - **队列管理:** p-queue
 - **包管理器:** pnpm
 - **其他:** Chalk (控制台输出美化), dotenv (环境变量管理)
