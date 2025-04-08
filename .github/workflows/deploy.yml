@@ -21,6 +21,8 @@ jobs:
 
       - name: Setup PNPM (设置 PNPM)
         uses: pnpm/action-setup@v4
+        with:
+          version: latest
 
       # 2. CI 阶段：安装所有依赖 (包括 devDependencies 用于检查)
       - name: Install All Dependencies (安装所有依赖)
