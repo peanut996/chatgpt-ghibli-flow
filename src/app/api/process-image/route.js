@@ -7,18 +7,17 @@ import crypto from "crypto";
 import TelegramBot from "node-telegram-bot-api";
 import chalk from "chalk";
 import PQueue from 'p-queue';
+import { PromptType, defaultPrompts } from './config.js';
 
 // --- Configuration ---
 const COOKIES_PATH = path.resolve(
     process.env.COOKIES_FILE_PATH || "./cookies.json",
 );
-const PROMPT = process.env.PROMPT || "请将这张图片转换为吉卜力风格的图像。去除右下角文字，保持原来图像的长宽比";
 const proxy = process.env.PROXY || '';
 const HEADLESS_MODE = process.env.HEADLESS !== "false";
 const UPLOAD_TIMEOUT = parseInt(process.env.UPLOAD_TIMEOUT || "20000", 10);
-const INPUT_TIMEOUT = parseInt(process.env.INPUT_TIMEOUT || "5000", 10);
 const GENERATION_TIMEOUT = parseInt(
-    process.env.GENERATION_TIMEOUT || "240000",
+    process.env.GENERATION_TIMEOUT || "240000", // 4 minutes
     10,
 );
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -45,7 +44,7 @@ if (TELEGRAM_BOT_TOKEN) {
 }
 
 // --- sendToTelegram Function ---
-const sendToTelegram = async (isSuccess, content, caption = "") => {
+const sendToTelegram = async (isSuccess, content, caption = "", promptUsed = "") => {
     if (!bot) {
         console.error(chalk.red("❌ Telegram Bot 未初始化。无法发送消息。"));
         return;
@@ -55,26 +54,19 @@ const sendToTelegram = async (isSuccess, content, caption = "") => {
         return;
     }
     try {
+        const promptLabel = promptUsed ? `\n指令: ${promptUsed.substring(0, 100)}${promptUsed.length > 100 ? '...' : ''}` : "\n(仅上传图片)";
         if (isSuccess) {
-            console.log(
-                chalk.blue(
-                    `✉️ [后台] 正在发送图片 URL 到 Telegram Chat ID: ${TELEGRAM_CHAT_ID}`,
-                ),
-            );
-            const captionUrl = `[🔗 ${caption}](${content})`;
+            console.log(chalk.blue(`✉️ [后台] 发送图片 URL 到 Telegram: ${TELEGRAM_CHAT_ID}`));
+            const fullCaption = `[🔗 ${caption}](${content})${promptLabel}`;
             await bot.sendPhoto(TELEGRAM_CHAT_ID, content, {
                 parse_mode: "Markdown",
-                caption: captionUrl,
+                caption: fullCaption.substring(0, 1024), // Telegram caption limit
             });
             console.log(chalk.green(`✅ [后台] 图片 URL 已成功发送到 Telegram。`));
         } else {
-            console.log(
-                chalk.blue(
-                    `✉️ [后台] 正在发送错误消息到 Telegram Chat ID: ${TELEGRAM_CHAT_ID}`,
-                ),
-            );
-            const errorMessage = `❌ 处理失败: ${content}\n文件名: ${caption || "未知"}`;
-            await bot.sendMessage(TELEGRAM_CHAT_ID, errorMessage.substring(0, 4096));
+            console.log(chalk.blue(`✉️ [后台] 发送错误消息到 Telegram: ${TELEGRAM_CHAT_ID}`));
+            const errorMessage = `❌ 处理失败: ${content}\n文件名: ${caption || "未知"}${promptLabel}`;
+            await bot.sendMessage(TELEGRAM_CHAT_ID, errorMessage.substring(0, 4096)); // TG message limit
             console.log(chalk.green(`✅ [后台] 错误消息已发送到 Telegram。`));
         }
     } catch (error) {
@@ -89,16 +81,13 @@ let isBrowserLaunching = false;
 async function getBrowser() {
     if (browserInstance) {
         try {
+            // Quick check if browser is still connected
             await browserInstance.version();
             console.log(chalk.gray(" puppeteer: 重用现有浏览器实例。"));
             return browserInstance;
         } catch (e) {
-            console.warn(
-                chalk.yellow(" puppeteer: 浏览器似乎已断开连接，正在启动新的实例。"),
-            );
-            try {
-                await browserInstance.close();
-            } catch (_) {}
+            console.warn(chalk.yellow(" puppeteer: 浏览器似乎已断开连接，正在启动新的实例。"));
+            try { await browserInstance.close(); } catch (_) {}
             browserInstance = null;
         }
     }
@@ -177,6 +166,8 @@ async function getBrowser() {
 }
 
 async function countdown(label, durationMs) {
+    if (durationMs <= 0) return; // Skip if duration is zero or negative
+
     const interval = 1000;
     let remaining = durationMs;
 
@@ -202,8 +193,8 @@ async function countdown(label, durationMs) {
     return new Promise((resolve) => {
         const timer = setInterval(() => {
             remaining -= interval;
-            if(process.stdout.isTTY){
-                writeOutput(chalk.yellow(`🧙 ${label}（剩余 ${formatTime(remaining)}）`));
+            if (process.stdout.isTTY) {
+                writeOutput(chalk.yellow(`⏳ ${label}（剩余 ${formatTime(remaining)}）`));
             }
 
             if (remaining <= 0) {
@@ -218,10 +209,10 @@ async function countdown(label, durationMs) {
 }
 
 // --- processImageInBackground Function ---
-async function processImageInBackground(uploadedFilePath, originalFilename) {
+async function processImageInBackground(uploadedFilePath, originalFilename, finalPromptToUse) {
     console.log(
         chalk.cyan(
-            `--- [后台] 开始处理: ${originalFilename} (Temp: ${uploadedFilePath}) ---`,
+            `--- [后台] 开始处理: ${originalFilename} (使用 Prompt: ${finalPromptToUse || '无'}) ---`,
         ),
     );
     let browser = null;
@@ -230,7 +221,7 @@ async function processImageInBackground(uploadedFilePath, originalFilename) {
     try {
         browser = await getBrowser();
         page = await browser.newPage();
-        await page.goto("https://chatgpt.com", { waitUntil: "networkidle2" });
+        await page.goto("https://chatgpt.com/?model=gpt-4o", { waitUntil: "networkidle2", timeout: 90000 }); // Longer timeout, specify model?
         console.log(chalk.green(`📤 处理图片: ${originalFilename}`));
 
         const fileInputSelector = 'input[type="file"]';
@@ -239,39 +230,52 @@ async function processImageInBackground(uploadedFilePath, originalFilename) {
         await fileInput.uploadFile(uploadedFilePath);
         await countdown("等待文件上传完成", 15000);
 
-        await page.type("textarea", PROMPT);
+        await page.type("textarea", finalPromptToUse, {delay: 50});
         await countdown("等待输入完成", 5000);
         await page.keyboard.press("Enter");
 
-        await countdown("正在生成吉卜力图像，请稍等...", 180000);
 
-        const imageUrls = await page.$$eval("img", (imgs) =>
-            imgs
-                .map((img) => img.src)
-                .filter((src) => src.startsWith("blob:") || src.startsWith("https")),
-        );
+        const stopGeneratingSelector = 'button[aria-label*="Stop streaming"]';
+        try {
+            console.log(chalk.gray(`⏳  等待生成完成指示器消失...`));
+            await page.waitForSelector(stopGeneratingSelector, { hidden: true, timeout: GENERATION_TIMEOUT });
+            console.log(chalk.green(`⏳  生成完成指示器已消失。`));
+        } catch (e) {
+            console.warn(chalk.yellow(`⏳  等待生成完成指示器超时 (${GENERATION_TIMEOUT/1000}s)，将继续检查图像。`));
+        }
 
-        if (imageUrls.length === 0) {
-            console.log(chalk.red("⚠️ 未找到生成图像，跳过。"));
-            await page.close();
+        await countdown("图像已生成，请稍等...", 5000);
+
+        let imageElement = null;
+        const imageSelector = 'img[alt="Generated image"]';
+        try {
+            await page.waitForSelector(imageSelector, { timeout: 10000 });
+            imageElement = await page.$(imageSelector);
+        } catch (e) {
+            console.warn(chalk.yellow(`⏳  等待图像元素超时，尝试获取第一个图像元素。`));
+            const imageUrls = await page.$$eval("img", (imgs) =>
+                imgs
+                    .map((img) => img.src)
+                    .filter((src) => src.startsWith("blob:") || src.startsWith("https") || src.includes("files.oaiusercontent.com"))
+            );
+            const originalFileUrl = imageUrls[imageUrls.length - 1];
+            console.error(chalk.red("❌ 未找到生成的图像元素。"));
+            await sendToTelegram(false, originalFileUrl, originalFilename, finalPromptToUse);
             return;
         }
 
-        const imageUrl = imageUrls[imageUrls.length - 1];
-        console.log(chalk.green(`📥 下载图像: ${imageUrl}`));
+        const imageUrl = await page.evaluate(el => el.src, imageElement);
+        console.log(chalk.green(`✅ 找到图像 URL: ${imageUrl.substring(0, 100)}...`));
 
         const caption = `${originalFilename}`;
-        await sendToTelegram(true, imageUrl, caption);
+        await sendToTelegram(true, imageUrl, caption, finalPromptToUse);
     } catch (error) {
-        console.error(
-            chalk.red(`❌ [后台] 处理 ${originalFilename} 时出错:`),
-            error,
-        );
-        await sendToTelegram(false, error.message, originalFilename);
+        console.error(chalk.red(`❌ [后台] 处理 ${originalFilename} 时出错:`), error);
+        await sendToTelegram(false, error.message, originalFilename, finalPromptToUse);
     } finally {
         console.log(chalk.gray(`  [后台] 关闭页面 ${originalFilename}...`));
         if (page && !page.isClosed()) {
-            await page.close();
+            try { await page.close(); } catch (closeError) { console.error("Error closing page:", closeError); }
         }
         if (uploadedFilePath) {
             try {
@@ -290,23 +294,28 @@ async function processImageInBackground(uploadedFilePath, originalFilename) {
     }
 }
 
-// Add queue processing function
-function addToProcessQueue(uploadedFilePath, originalFilename) {
+// --- addToProcessQueue Function ---
+function addToProcessQueue(uploadedFilePath, originalFilename, finalPromptToUse) {
     queue.add(async () => {
-
-        const msg = `📋 正在处理队列任务: ${originalFilename} (队列中还有 ${queue.size} 个任务)`;
-        await bot.sendMessage(TELEGRAM_CHAT_ID, msg);
+        const promptSnippet = finalPromptToUse ? `(${finalPromptToUse.substring(0, 30)}...)` : '(仅图片)';
+        const msg = `⏳ 处理任务加入队列: ${originalFilename} ${promptSnippet} (队列中还有 ${queue.size} 个任务)`;
+        if (bot && TELEGRAM_CHAT_ID) {
+            try {
+                await bot.sendMessage(TELEGRAM_CHAT_ID, msg);
+            } catch (tgError) {
+                console.error(chalk.red('❌ 发送队列消息到Telegram失败:'), tgError);
+            }
+        }
         console.log(chalk.blue(msg));
-        await processImageInBackground(uploadedFilePath, originalFilename);
+
+        await processImageInBackground(uploadedFilePath, originalFilename, finalPromptToUse);
     }).catch((error) => {
-        console.error(
-            chalk.red("💥 [队列] 处理任务时发生错误:"),
-            error
-        );
+        console.error(chalk.red("💥 [队列] 处理任务时发生顶层错误:"), error);
         sendToTelegram(
             false,
             `队列任务处理失败: ${error instanceof Error ? error.message : String(error)}`,
-            originalFilename
+            originalFilename,
+            finalPromptToUse
         );
     });
 }
@@ -319,78 +328,96 @@ export async function POST(req) {
             { status: 405, headers: { Allow: "POST" } },
         );
     }
-    console.log(
-        chalk.cyan(`\n--- 收到新请求 (App Router / JS / No Formidable) ---`),
-    );
+    console.log(chalk.cyan(`\n--- 收到新请求 (Enum Type) ---`));
     let tempFilePath = null;
+    let receivedPromptType = PromptType.GHIBLI; // Default value
+    let finalPromptToUse = defaultPrompts[PromptType.GHIBLI]; // Default prompt text
 
     try {
         const formData = await req.formData();
         const imageFile = formData.get("image");
 
-        if (!imageFile || !(imageFile instanceof File)) {
-            console.error(
-                chalk.red("❌ 请求中未找到 'image' 文件字段或类型不正确。"),
-            );
-            return NextResponse.json(
-                { success: false, error: "请求中缺少 'image' 文件字段。" },
-                { status: 400 },
-            );
-        }
-        const originalFilename = imageFile.name || `upload_${Date.now()}`;
-        console.log(
-            chalk.blue(
-                `📄 收到文件: ${originalFilename}, 类型: ${imageFile.type}, 大小: ${imageFile.size} bytes`,
-            ),
-        );
+        // Read promptType and customPromptText
+        const promptTypeFromRequest = formData.get("promptType")?.toString();
+        const customPromptTextFromRequest = formData.get("customPromptText")?.toString();
 
+        if (!imageFile || !(imageFile instanceof File)) {
+            console.error(chalk.red("❌ 请求中未找到 'image' 文件字段或类型不正确。"));
+            return NextResponse.json({ success: false, error: "请求中缺少 'image' 文件字段。" },{ status: 400 });
+        }
+
+        const originalFilename = imageFile.name || `upload_${Date.now()}`;
+        console.log(chalk.blue(`📄 收到文件: ${originalFilename}, 类型: ${imageFile.type}, 大小: ${imageFile.size} bytes`));
+
+        // Determine the final prompt based on type
+        receivedPromptType = promptTypeFromRequest || PromptType.GHIBLI; // Default to Ghibli if not provided
+        console.log(chalk.blue(`ℹ️ 请求的 Prompt 类型: ${receivedPromptType}`));
+
+        switch (receivedPromptType) {
+            case PromptType.GHIBLI:
+                finalPromptToUse = defaultPrompts[PromptType.GHIBLI];
+                break;
+            case PromptType.CAT_HUMAN:
+                finalPromptToUse = defaultPrompts[PromptType.CAT_HUMAN];
+                break;
+            case PromptType.IRASUTOYA:
+                finalPromptToUse = defaultPrompts[PromptType.IRASUTOYA];
+                break;
+            case PromptType.CUSTOM:
+                if (!customPromptTextFromRequest?.trim()) {
+                    console.error(chalk.red(`❌ 收到 'custom' 类型但未收到有效的 'customPromptText'`));
+                    return NextResponse.json({ success: false, error: "选择了自定义 Prompt 但未提供文本。" }, { status: 400 });
+                }
+                finalPromptToUse = customPromptTextFromRequest;
+                console.log(chalk.blue(`📝 使用自定义 Prompt: "${finalPromptToUse}"`));
+                break;
+            default:
+                // Handle unexpected type - default to Ghibli
+                console.warn(chalk.yellow(`⚠️ 未知的 Prompt 类型 "${receivedPromptType}", 使用默认 Ghibli。`));
+                receivedPromptType = PromptType.GHIBLI;
+                finalPromptToUse = defaultPrompts[PromptType.GHIBLI];
+        }
+
+        // Sanitize filename before creating path
+        const safeOriginalFilename = path.basename(originalFilename).replace(/[^a-zA-Z0-9.\-_]/g, '_'); // Basic sanitize
         const fileBuffer = Buffer.from(await imageFile.arrayBuffer());
         const tempDir = os.tmpdir();
         const uniqueSuffix = crypto.randomBytes(6).toString("hex");
-        tempFilePath = path.join(
-            tempDir,
-            `ghibliflow-${Date.now()}-${uniqueSuffix}-${originalFilename}`,
-        );
+        tempFilePath = path.join(tempDir, `ghibliflow-${Date.now()}-${uniqueSuffix}-${safeOriginalFilename}`);
 
         console.log(chalk.gray(`  写入临时文件到: ${tempFilePath}`));
         await fs.writeFile(tempFilePath, fileBuffer);
         console.log(chalk.green(`✅ 临时文件写入成功。`));
 
-        console.log(
-            chalk.green(`✅ 文件接收并保存成功，添加到处理队列。`),
-        );
+        console.log(chalk.green(`✅ 文件接收并保存成功，添加到处理队列。`));
 
-        addToProcessQueue(tempFilePath, originalFilename);
+        addToProcessQueue(tempFilePath, originalFilename, finalPromptToUse);
 
         return NextResponse.json(
             {
                 success: true,
                 message: "文件已加入处理队列。请稍后查看 Telegram。",
                 originalFilename: originalFilename,
-                queueSize: queue.size
+                queueSize: queue.size + queue.pending, // More accurate queue size
+                promptTypeUsed: receivedPromptType, // Return the type enum key used
+                finalPromptUsed: finalPromptToUse // Return the actual prompt text used
             },
             { status: 200 },
         );
     } catch (error) {
-        console.error(chalk.red("❌ API 处理程序错误 (文件接收/保存阶段):"), error);
+        console.error(chalk.red("❌ API 处理程序错误 (文件接收/解析阶段):"), error);
         if (tempFilePath) {
-            console.log(
-                chalk.yellow(`  尝试清理因错误未处理的临时文件: ${tempFilePath}`),
+            await fs.unlink(tempFilePath).catch(cleanupError =>
+                console.error(chalk.yellow(`⚠️ [API错误后] 清理临时文件 ${tempFilePath} 失败:`), cleanupError)
             );
-            await fs
-                .unlink(tempFilePath)
-                .catch((cleanupError) =>
-                    console.error(
-                        chalk.yellow(`⚠️ [API错误后] 清理临时文件 ${tempFilePath} 失败:`),
-                        cleanupError,
-                    ),
-                );
         }
-        const statusCode = 500;
-        const message = error.message || "处理上传时发生内部服务器错误。";
+        // Send error to Telegram if possible
+        // Note: finalPromptToUse might be the default if error happened early
+        await sendToTelegram(false, `API 错误: ${error.message || '未知错误'}`, 'API 请求失败', finalPromptToUse);
+
         return NextResponse.json(
-            { success: false, error: message },
-            { status: statusCode },
+            { success: false, error: error.message || "处理上传时发生内部服务器错误。" },
+            { status: 500 }
         );
     }
 }

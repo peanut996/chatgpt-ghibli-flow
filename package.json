@@ -36,5 +36,6 @@
     "overrides": {
       "clone-deep": "^4.0.1"
     }
-  }
+  },
+  "packageManager": "pnpm@9.15.3"
 }
