@@ -124,8 +124,13 @@ const sendToTelegram = async (
           `✉️ [后台][TG] 发送错误消息到 Telegram: ${TELEGRAM_CHAT_ID}`,
         ),
       );
-      const errorMessage = `❌ 处理失败: ${content}\n文件名: ${caption || '未知'}${promptLabel}`;
-      await bot.sendMessage(TELEGRAM_CHAT_ID, errorMessage.substring(0, 4096)); // TG message limit
+      const errorMessage = `❌ 处理失败: ${content}
+      ${caption ? '📄 文件名：' + caption : ''}
+      ${promptLabel ? `📟 Prompt:${promptLabel}` : ''}
+      `;
+      await bot.sendMessage(TELEGRAM_CHAT_ID, errorMessage.substring(0, 4096), {
+        parse_mode: 'Markdown',
+      }); // TG message limit
       console.log(chalk.green(`✅ [后台][TG] 错误消息已发送到 Telegram。`));
     }
   } catch (error) {
@@ -403,7 +408,7 @@ async function processImageInBackground(
       console.error(chalk.red('❌ 未找到生成的图像元素。'));
       await sendToTelegram(
         false,
-        originalFileUrl,
+        `[${originalFilename}](${originalFileUrl})`,
         originalFilename,
         finalPromptToUse,
       );
