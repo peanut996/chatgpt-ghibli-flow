@@ -404,12 +404,25 @@ async function processImageInBackground(
       );
       const originalFileUrl = imageUrls[imageUrls.length - 1];
       console.error(chalk.red('❌ 未找到生成的图像元素。'));
-      await sendToTelegram(
+      sendToTelegram(
         false,
         `[${originalFilename}](${originalFileUrl})`,
         originalFilename,
         finalPromptToUse,
-      );
+      ).catch((err) => {
+        console.error(chalk.red(`❌ 发送错误消息到 Telegram 失败:`), err);
+      });
+      sendToEmail(
+        false,
+        '❌ 未找到生成的图像',
+        recipientEmail,
+        originalFilename,
+      ).catch((err) => {
+        console.log(
+          chalk.red(`❌ 发送错误消息到 ${recipientEmail} 失败:`),
+          err,
+        );
+      });
       return;
     }
 
