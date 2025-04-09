@@ -1,13 +1,15 @@
 @import 'tailwindcss';
 
-html, body {
-  @apply h-full w-full m-0 p-0;
+html,
+body {
+  @apply m-0 h-full w-full p-0;
 }
 
 body {
-  @apply bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen antialiased;
+  @apply min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 antialiased;
 }
 
-#__next, .page-container {
-  @apply h-full min-h-screen flex flex-col;
+#__next,
+.page-container {
+  @apply flex h-full min-h-screen flex-col;
 }
