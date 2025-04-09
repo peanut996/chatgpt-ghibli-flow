@@ -92,6 +92,7 @@ const sendToTelegram = async (
   content,
   caption = '',
   promptUsed = '',
+  screenshot = null,
 ) => {
   if (!bot) {
     return;
@@ -126,13 +127,30 @@ const sendToTelegram = async (
       );
       const errorMessage = `❌ 处理失败: ${content}
 ${promptLabel}`;
-      await bot.sendMessage(TELEGRAM_CHAT_ID, errorMessage, {
-        parse_mode: 'Markdown',
-      }); // TG message limit
+      if (screenshot) {
+        const buffer = Buffer.from(screenshot);
+        bot
+          .sendPhoto(TELEGRAM_CHAT_ID, buffer, {
+            caption: errorMessage,
+            parse_mode: 'Markdown',
+          })
+          .catch((err) => {
+            console.error(chalk.red('❌ 发送错误截图到 Telegram 失败:'), err);
+          });
+      } else {
+        bot
+          .sendMessage(TELEGRAM_CHAT_ID, errorMessage, {
+            parse_mode: 'Markdown',
+          })
+          .catch((err) => {
+            console.error(chalk.red('❌ 发送错误截图到 Telegram 失败:'), err);
+          });
+      }
+
       console.log(chalk.green(`✅ [后台][TG] 错误消息已发送到 Telegram。`));
     }
   } catch (error) {
-    console.error(chalk.red(`❌ [后台][TG] 发送消息到 Telegram 失败:`), error);
+    console.error(chalk.red(`❌ [后台][TG] 发送照片到 Telegram 失败:`), error);
   }
 };
 
@@ -404,25 +422,22 @@ async function processImageInBackground(
       );
       const originalFileUrl = imageUrls[imageUrls.length - 1];
       console.error(chalk.red('❌ 未找到生成的图像元素。'));
+      const errorScreenShot = await page.screenshot();
+      const bufferToSend = Buffer.from(errorScreenShot);
+
       sendToTelegram(
         false,
         `[${originalFilename}](${originalFileUrl})`,
         originalFilename,
         finalPromptToUse,
-      ).catch((err) => {
-        console.error(chalk.red(`❌ 发送错误消息到 Telegram 失败:`), err);
-      });
+        bufferToSend,
+      );
       sendToEmail(
         false,
         '❌ 未找到生成的图像',
         recipientEmail,
         originalFilename,
-      ).catch((err) => {
-        console.log(
-          chalk.red(`❌ 发送错误消息到 ${recipientEmail} 失败:`),
-          err,
-        );
-      });
+      );
       return;
     }
 
@@ -430,28 +445,14 @@ async function processImageInBackground(
     console.log(chalk.green(`✅ 提取到图像 URL: ${imageUrl}...`));
 
     const caption = `${originalFilename}`;
-    sendToTelegram(true, imageUrl, caption, finalPromptToUse).catch((err) => {
-      console.error(
-        chalk.red(
-          `❌ 提取成功但发送 Telegram 消息失败: ${originalFilename} -- ${imageUrl}`,
-        ),
-        err,
-      );
-    });
+    sendToTelegram(true, imageUrl, caption, finalPromptToUse);
     sendToEmail(
       true,
       imageUrl,
       recipientEmail,
       originalFilename,
       finalPromptToUse,
-    ).catch((err) => {
-      console.error(
-        chalk.red(
-          `❌ 提取成功但发送邮件失败: ${originalFilename} -- ${imageUrl}`,
-        ),
-        err,
-      );
-    });
+    );
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error(
@@ -459,11 +460,7 @@ async function processImageInBackground(
       errorMsg, // Log the message
       error.stack, // Log the stack for more details if needed
     );
-    sendToTelegram(false, errorMsg, originalFilename, finalPromptToUse).catch(
-      (error) => {
-        console.error(chalk.red(`❌ 发送错误消息到 Telegram 失败:`), error);
-      },
-    );
+    sendToTelegram(false, errorMsg, originalFilename, finalPromptToUse);
   } finally {
     console.log(chalk.gray(`  [后台] 关闭页面 ${originalFilename}...`));
     if (page && !page.isClosed()) {
@@ -530,11 +527,7 @@ function addToProcessQueue(
         `队列任务处理失败: ${errorMsg}`,
         originalFilename,
         finalPromptToUse,
-      ).then((err) => {
-        if (err) {
-          console.error(chalk.red('❌ 发送队列错误消息到 Telegram 失败:'), err);
-        }
-      });
+      );
     });
 }
 
@@ -674,9 +667,7 @@ export async function POST(req) {
       `API 错误: ${errorMsg}`,
       'API 请求失败',
       finalPromptToUse,
-    ).catch((err) => {
-      console.error(chalk.red('❌ 发送错误消息到 Telegram 失败:'), err);
-    });
+    );
 
     return NextResponse.json(
       {
