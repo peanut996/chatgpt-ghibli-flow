@@ -442,7 +442,7 @@ async function processImageInBackground(
     }
 
     const imageUrl = await page.evaluate((el) => el.src, imageElement);
-    console.log(chalk.green(`✅ 提取到图像 URL: ${imageUrl}...`));
+    console.log(chalk.green(`✅ 提取到图像 URL: ${imageUrl}`));
 
     const caption = `${originalFilename}`;
     sendToTelegram(true, imageUrl, caption, finalPromptToUse);
