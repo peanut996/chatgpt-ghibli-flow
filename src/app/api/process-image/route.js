@@ -422,15 +422,16 @@ async function processImageInBackground(
       );
       const originalFileUrl = imageUrls[imageUrls.length - 1];
       console.error(chalk.red('❌ 未找到生成的图像元素。'));
-      const errorScreenShot = await page.screenshot();
-      const bufferToSend = Buffer.from(errorScreenShot);
+      const errorScreenShot = await page.screenshot({
+        fullPage: true,
+      });
 
       sendToTelegram(
         false,
         `[${originalFilename}](${originalFileUrl})`,
         originalFilename,
         finalPromptToUse,
-        bufferToSend,
+        errorScreenShot,
       );
       sendToEmail(
         false,
