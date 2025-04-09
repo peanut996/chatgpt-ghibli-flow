@@ -125,10 +125,8 @@ const sendToTelegram = async (
         ),
       );
       const errorMessage = `❌ 处理失败: ${content}
-      ${caption ? '📄 文件名：' + caption : ''}
-      ${promptLabel ? `📟 Prompt:${promptLabel}` : ''}
-      `;
-      await bot.sendMessage(TELEGRAM_CHAT_ID, errorMessage.substring(0, 4096), {
+${promptLabel}`;
+      await bot.sendMessage(TELEGRAM_CHAT_ID, errorMessage, {
         parse_mode: 'Markdown',
       }); // TG message limit
       console.log(chalk.green(`✅ [后台][TG] 错误消息已发送到 Telegram。`));
