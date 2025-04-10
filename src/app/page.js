@@ -7,6 +7,7 @@ const promptOptionsUI = [
   { type: 'ghibli', label: '吉卜力风格 (Ghibli Style)' },
   { type: 'cat-human', label: '猫咪拟人化 (Cats as Humans)' },
   { type: 'irasutoya', label: 'いらすとや风格 (Irasutoya Style)' },
+  { type: 'sticker', label: '贴纸风格 (Sticker Set)' },
   { type: 'custom', label: '自定义 Prompt (Custom)' },
 ];
 const DEFAULT_PROMPT_TYPE = 'ghibli';
