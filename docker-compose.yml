@@ -15,12 +15,11 @@ services:
     volumes:
       - ./cookies.json:/app/cookies.json:ro
       - ./.env:/app/.env:ro # Mount the .env file itself
-      - ./.env.local:/app/.env.local:ro # Mount the .env file itself
+
     # Inject environment variables from the host's .env file
     # Variables here take precedence over those in the mounted /app/.env if the app reads from process.env first
     env_file:
       - .env
-      - .env.local
     # Additional environment variables needed at runtime
     environment:
       # Ensures Next.js runs in production mode inside the container

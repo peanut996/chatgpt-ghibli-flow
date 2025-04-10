@@ -81,9 +81,6 @@ ENV NODE_ENV production
 # Disable Next.js telemetry
 ENV NEXT_TELEMETRY_DISABLED 1
 
-# Create a non-root user and group
-RUN groupadd --system --gid 1001 node \
-    && useradd --system --uid 1001 --gid node node
 
 # Copy built assets and necessary files from the builder stage
 COPY --from=builder --chown=node:node /app/.next ./.next
