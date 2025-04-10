@@ -4,7 +4,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: ghibli_flow_app # Optional: Give the container a specific name
     # Map port 3000 on the host to port 3000 in the container
     ports:
       - "3000:3000"
