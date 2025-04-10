@@ -381,7 +381,7 @@ async function processImageInBackground(
       imageElement = await page.$(imageSelector);
     } catch (e) {
       console.warn(
-        chalk.yellow(`⏳  等待图像元素超时，尝试获取第一个图像元素。`),
+        chalk.yellow(`⏳ 等待图像元素超时，尝试获取第一个图像元素。`),
       );
 
       const errorMessage = await page.evaluate(() => {
@@ -392,7 +392,7 @@ async function processImageInBackground(
         return lastMessage ? lastMessage.textContent.trim() : '未知错误';
       });
 
-      console.error(chalk.red(`❌  页面错误消息: ${errorMessage}`));
+      console.error(chalk.red(`❌ 页面错误消息: ${errorMessage}`));
 
       const imageUrls = await page.$$eval('img', (imgs) =>
         imgs
@@ -405,7 +405,7 @@ async function processImageInBackground(
           ),
       );
       const originalFileUrl = imageUrls[imageUrls.length - 1];
-      console.error(chalk.red('❌  未找到生成的图像元素。'));
+      console.error(chalk.red('❌ 未找到生成的图像元素。'));
 
       sendToTelegram(
         false,
