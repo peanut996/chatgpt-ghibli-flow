@@ -44,5 +44,11 @@ docker-compose down --remove-orphans
 
 echo "Running application..."
 docker-compose up -d --build
+echo "Running application completed."
+
+echo "Clean unused docker container and image..."
+docker system prune -f
+echo "Clean unused docker container and image completed."
 
 echo "🎉 Application deployed successfully!"
+
