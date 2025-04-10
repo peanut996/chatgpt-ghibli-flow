@@ -86,13 +86,11 @@ if (SMTP_HOST && SMTP_USER && SMTP_PASS && SMTP_FROM) {
   );
 }
 
-// --- sendToTelegram Function (Keep as is) ---
 const sendToTelegram = async (
   isSuccess,
-  content,
-  caption = '',
+  imageUrl,
+  description = '',
   promptUsed = '',
-  screenshot = null,
 ) => {
   if (!bot) {
     return;
@@ -105,52 +103,27 @@ const sendToTelegram = async (
     const promptLabel = promptUsed
       ? `\n📟 Prompt: ${promptUsed}`
       : '\n(仅上传图片)';
-    if (isSuccess) {
-      console.log(
-        chalk.blue(
-          `✉️ [后台][TG] 发送图片 URL 到 Telegram: ${TELEGRAM_CHAT_ID}`,
-        ),
-      );
-      const fullCaption = `[🔗 ${caption}](${content})${promptLabel}`;
-      await bot.sendPhoto(TELEGRAM_CHAT_ID, content, {
-        parse_mode: 'Markdown',
-        caption: fullCaption,
-      });
-      console.log(
-        chalk.green(`✅ [后台][TG] 图片 URL 已成功发送到 Telegram。`),
-      );
-    } else {
-      console.log(
-        chalk.blue(
-          `✉️ [后台][TG] 发送错误消息到 Telegram: ${TELEGRAM_CHAT_ID}`,
-        ),
-      );
-      const errorMessage = `❌ 处理失败: ${content}
-${promptLabel}`;
-      if (screenshot) {
-        const buffer = Buffer.from(screenshot);
-        bot
-          .sendPhoto(TELEGRAM_CHAT_ID, buffer, {
-            caption: errorMessage,
-            parse_mode: 'Markdown',
-          })
-          .catch((err) => {
-            console.error(chalk.red('❌ 发送错误截图到 Telegram 失败:'), err);
-          });
-      } else {
-        bot
-          .sendMessage(TELEGRAM_CHAT_ID, errorMessage, {
-            parse_mode: 'Markdown',
-          })
-          .catch((err) => {
-            console.error(chalk.red('❌ 发送错误截图到 Telegram 失败:'), err);
-          });
-      }
+    let msg = isSuccess
+      ? `✅ ${description}\n${promptLabel}`
+      : `❌ ${description}\n${promptLabel}`;
 
-      console.log(chalk.green(`✅ [后台][TG] 错误消息已发送到 Telegram。`));
+    if (imageUrl) {
+      await bot.sendPhoto(TELEGRAM_CHAT_ID, imageUrl, {
+        parse_mode: 'Markdown',
+        caption: msg,
+      });
+    } else {
+      await bot.sendMessage(TELEGRAM_CHAT_ID, msg, {
+        parse_mode: 'Markdown',
+      });
     }
+
+    console.log(chalk.green(`✅ [后台][TG] 发送处理结果已发送到 Telegram。`));
   } catch (error) {
-    console.error(chalk.red(`❌ [后台][TG] 发送照片到 Telegram 失败:`), error);
+    console.error(
+      chalk.red(`❌ [后台][TG] 发送处理结果到 Telegram 失败:`),
+      error,
+    );
   }
 };
 
@@ -399,7 +372,7 @@ async function processImageInBackground(
       );
     }
 
-    await countdown('图像已生成，请稍等...', 5000);
+    await countdown('生成已结束，获取结果中...', 5000);
 
     let imageElement = null;
     const imageSelector = 'img[alt="Generated image"]';
@@ -410,6 +383,17 @@ async function processImageInBackground(
       console.warn(
         chalk.yellow(`⏳  等待图像元素超时，尝试获取第一个图像元素。`),
       );
+
+      const errorMessage = await page.evaluate(() => {
+        const assistantMessages = Array.from(
+          document.querySelectorAll('[data-message-author-role="assistant"]'),
+        );
+        const lastMessage = assistantMessages[assistantMessages.length - 1];
+        return lastMessage ? lastMessage.textContent.trim() : '未知错误';
+      });
+
+      console.error(chalk.red(`❌  页面错误消息: ${errorMessage}`));
+
       const imageUrls = await page.$$eval('img', (imgs) =>
         imgs
           .map((img) => img.src)
@@ -421,21 +405,17 @@ async function processImageInBackground(
           ),
       );
       const originalFileUrl = imageUrls[imageUrls.length - 1];
-      console.error(chalk.red('❌ 未找到生成的图像元素。'));
-      const errorScreenShot = await page.screenshot({
-        fullPage: true,
-      });
+      console.error(chalk.red('❌  未找到生成的图像元素。'));
 
       sendToTelegram(
         false,
-        `[${originalFilename}](${originalFileUrl})`,
-        originalFilename,
+        originalFileUrl,
+        `[${originalFilename}](${originalFileUrl}) \n\n🙅 原因：${errorMessage}`,
         finalPromptToUse,
-        errorScreenShot,
       );
       sendToEmail(
         false,
-        '❌ 未找到生成的图像',
+        '❌ 未找到生成的图像: ' + errorMessage,
         recipientEmail,
         originalFilename,
       );
@@ -445,8 +425,8 @@ async function processImageInBackground(
     const imageUrl = await page.evaluate((el) => el.src, imageElement);
     console.log(chalk.green(`✅ 提取到图像 URL: ${imageUrl}`));
 
-    const caption = `${originalFilename}`;
-    sendToTelegram(true, imageUrl, caption, finalPromptToUse);
+    const desc = `[${originalFilename}](${imageUrl})`;
+    sendToTelegram(true, imageUrl, desc, finalPromptToUse);
     sendToEmail(
       true,
       imageUrl,
@@ -461,7 +441,8 @@ async function processImageInBackground(
       errorMsg, // Log the message
       error.stack, // Log the stack for more details if needed
     );
-    sendToTelegram(false, errorMsg, originalFilename, finalPromptToUse);
+    const err = `[${originalFilename}](${imageUrl}) \n\n❌ 错误: ${errorMsg}`;
+    sendToTelegram(false, null, err, finalPromptToUse);
   } finally {
     console.log(chalk.gray(`  [后台] 关闭页面 ${originalFilename}...`));
     if (page && !page.isClosed()) {
@@ -525,8 +506,8 @@ function addToProcessQueue(
       // Send error notifications
       sendToTelegram(
         false,
+        null,
         `队列任务处理失败: ${errorMsg}`,
-        originalFilename,
         finalPromptToUse,
       );
     });
@@ -663,12 +644,7 @@ export async function POST(req) {
         );
     }
 
-    sendToTelegram(
-      false,
-      `API 错误: ${errorMsg}`,
-      'API 请求失败',
-      finalPromptToUse,
-    );
+    sendToTelegram(false, null, `API 错误: ${errorMsg}`);
 
     return NextResponse.json(
       {
