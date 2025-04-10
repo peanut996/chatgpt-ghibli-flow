@@ -1,5 +1,3 @@
-version: '3.8' # Specify a recent version of the Compose file format
-
 services:
   ghibli-flow-app:
     # Build the image using the Dockerfile in the current directory (.)
