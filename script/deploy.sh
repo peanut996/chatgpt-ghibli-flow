@@ -39,18 +39,10 @@ fi
 
 source ~/.bashrc
 
+echo "Down Application"
+docker-compose down --remove-orphans
+
 echo "Running application..."
 docker-compose up -d --build
-echo "Application is running."
-
-
-echo "Pruning containers..."
-docker container prune -f
-echo "Pruning images..."
-docker image prune -f
-echo "Pruning volumes..."
-docker volume prune -f
-echo "Pruning networks..."
-docker network prune -f
 
 echo "🎉 Application deployed successfully!"
