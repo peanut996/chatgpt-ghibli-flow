@@ -460,6 +460,7 @@ export default function HomePage() {
                   isLoading ? 'cursor-not-allowed bg-gray-100 opacity-60' : ''
                 }`}
                 style={{
+                  resize: 'none',
                   boxShadow:
                     'inset 3px 3px 6px rgba(200, 204, 213, 0.5), inset -3px -3px 6px rgba(255, 255, 255, 0.8)',
                 }}
