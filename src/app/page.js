@@ -133,7 +133,6 @@ export default function HomePage() {
 
     setIsLoading(true);
     const formData = new FormData();
-    formData.append('image', selectedFile);
     formData.append('promptType', selectedPromptType);
     if (selectedPromptType === 'custom') {
       formData.append('customPromptText', customPromptText);
@@ -141,6 +140,7 @@ export default function HomePage() {
     if (email) {
       formData.append('email', email);
     }
+    formData.append('image', selectedFile);
 
     try {
       const response = await fetch('/api/process-image', {

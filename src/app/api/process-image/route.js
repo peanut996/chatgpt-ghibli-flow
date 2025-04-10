@@ -562,35 +562,8 @@ export async function POST(req) {
     receivedPromptType = promptTypeFromRequest || PromptType.GHIBLI;
     console.log(chalk.blue(`ℹ️ 请求的 Prompt 类型: ${receivedPromptType}`));
 
-    switch (receivedPromptType) {
-      case PromptType.GHIBLI:
-        finalPromptToUse = defaultPrompts[PromptType.GHIBLI];
-        break;
-      case PromptType.CAT_HUMAN:
-        finalPromptToUse = defaultPrompts[PromptType.CAT_HUMAN];
-        break;
-      case PromptType.IRASUTOYA:
-        finalPromptToUse = defaultPrompts[PromptType.IRASUTOYA];
-        break;
-      case PromptType.CUSTOM:
-        if (!customPromptTextFromRequest?.trim()) {
-          return NextResponse.json(
-            { success: false, error: '选择了自定义 Prompt 但未提供文本。' },
-            { status: 400 },
-          );
-        }
-        finalPromptToUse = customPromptTextFromRequest;
-        console.log(chalk.blue(`📝 使用自定义 Prompt: "${finalPromptToUse}"`));
-        break;
-      default:
-        console.warn(
-          chalk.yellow(
-            `⚠️ 未知的 Prompt 类型 "${receivedPromptType}", 使用默认 Ghibli。`,
-          ),
-        );
-        receivedPromptType = PromptType.GHIBLI;
-        finalPromptToUse = defaultPrompts[PromptType.GHIBLI];
-    }
+    finalPromptToUse =
+      defaultPrompts[receivedPromptType] || defaultPrompts[PromptType.GHIBLI];
 
     // Save temp file
     const safeOriginalFilename = path
