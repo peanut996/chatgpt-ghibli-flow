@@ -32,7 +32,8 @@ then
   echo "Docker Compose is already installed."
 else
   echo "Docker Compose is not installed, installing..."
-  apt install docker-compose -y
+  curl -SL https://github.com/docker/compose/releases/download/v2.35.0/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
+  chmod +x /usr/local/bin/docker-compose
   echo "Docker Compose installed successfully."
 fi
 
