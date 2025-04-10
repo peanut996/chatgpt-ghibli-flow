@@ -37,6 +37,8 @@ else
   echo "Docker Compose installed successfully."
 fi
 
+source ~/.bashrc
+
 echo "Running application..."
 docker-compose up -d --build
 echo "Application is running."
