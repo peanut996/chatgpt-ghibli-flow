@@ -1,0 +1,43 @@
+version: '3.8' # Specify a recent version of the Compose file format
+
+services:
+  ghibli-flow-app:
+    # Build the image using the Dockerfile in the current directory (.)
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ghibli_flow_app # Optional: Give the container a specific name
+    # Map port 3000 on the host to port 3000 in the container
+    ports:
+      - "3000:3000"
+    # Mount the external configuration files into the container
+    # :ro makes the mounted files read-only inside the container, which is safer
+    volumes:
+      - ./cookies.json:/app/cookies.json:ro
+      - ./.env:/app/.env:ro # Mount the .env file itself
+      - ./.env.local:/app/.env.local:ro # Mount the .env file itself
+    # Inject environment variables from the host's .env file
+    # Variables here take precedence over those in the mounted /app/.env if the app reads from process.env first
+    env_file:
+      - .env
+      - .env.local
+    # Additional environment variables needed at runtime
+    environment:
+      # Ensures Next.js runs in production mode inside the container
+      NODE_ENV: production
+      # Helps with log output compatibility, especially with PM2-like behavior or terminal emulators
+      TERM: dumb
+      # Tell the app where the cookies file is inside the container (matches the volume mount)
+      # This might override the value from the .env file if already set there.
+      COOKIES_FILE_PATH: /app/cookies.json
+      # Add any other runtime environment variables needed, potentially overriding .env values
+      # e.g., HEADLESS: true
+    # Restart policy: Restart the container unless it was explicitly stopped.
+    restart: unless-stopped
+    # Optional: Add healthcheck if needed
+    # healthcheck:
+    #   test: ["CMD", "curl", "--fail", "http://localhost:3000"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 30s # Give the app time to start before first check
