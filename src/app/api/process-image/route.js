@@ -461,11 +461,11 @@ function addToProcessQueue(
   queue
     .add(async () => {
       const emailNotice = recipientEmail ? ` -> ${recipientEmail}` : '';
-      const msg = `⏳ 处理任务加入队列: ${originalFilename}  ${emailNotice} (队列剩余任务：${queue.pending + queue.size})`;
+      const msg = `⏳ 正在处理任务: ${originalFilename}  ${emailNotice} (队列剩余任务：${queue.pending + queue.size})`;
 
       if (bot && TELEGRAM_CHAT_ID) {
         try {
-          const tgMsg = `⏳ 处理任务加入队列: ${originalFilename} (队列剩余任务：${queue.pending + queue.size})`;
+          const tgMsg = `⏳ 正在处理任务: ${originalFilename} (队列剩余任务：${queue.pending + queue.size})`;
           await bot.sendMessage(TELEGRAM_CHAT_ID, tgMsg);
         } catch (tgError) {
           console.error(chalk.red('❌ 发送队列消息到Telegram失败:'), tgError);
