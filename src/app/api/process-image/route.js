@@ -29,53 +29,70 @@ import {
 
 const queue = new PQueue({ concurrency: 1 });
 
-let bot = null;
-if (TELEGRAM_BOT_TOKEN) {
-  try {
-    bot = new TelegramBot(TELEGRAM_BOT_TOKEN, {
-      polling: false,
-      ...(PROXY && { request: { PROXY } }),
-    });
-  } catch (error) {
-    console.error(chalk.red('❌ 初始化 Telegram Bot 失败:'), error.message);
-  }
-} else {
-  console.warn(
-    chalk.yellow('⚠️ 未提供 TELEGRAM_BOT_TOKEN，Telegram 通知功能将不可用。'),
-  );
-}
+let _bot = null;
 
-let transporter = null;
-if (SMTP_HOST && SMTP_USER && SMTP_PASS && SMTP_FROM) {
-  try {
-    transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_SECURE,
-      auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
-      },
-      ...(PROXY && { proxy: PROXY }),
-    });
-    transporter.verify((error, _) => {
-      if (error) {
-        console.error(chalk.red('❌ 初始化 Nodemailer 失败:'), error);
-        transporter = null;
-      } else {
-        console.log(chalk.green('✅ Nodemailer (Email) 服务已准备就绪。'));
-      }
-    });
-  } catch (error) {
-    console.error(chalk.red('❌ 创建 Nodemailer transporter 时出错:'), error);
+const getBot = () => {
+  if (_bot) {
+    return _bot;
   }
-} else {
-  console.warn(
-    chalk.yellow(
-      '⚠️ 已启用邮件通知 (ENABLE_EMAIL_NOTIFICATIONS=true) 但缺少必要的 SMTP 配置 (HOST, USER, PASS, FROM)。邮件功能将不可用。',
-    ),
-  );
-}
+  if (TELEGRAM_BOT_TOKEN) {
+    try {
+      _bot = new TelegramBot(TELEGRAM_BOT_TOKEN, {
+        polling: false,
+        ...(PROXY && { request: { PROXY } }),
+      });
+    } catch (error) {
+      console.error(chalk.red('❌ 初始化 Telegram Bot 失败:'), error.message);
+    }
+  } else {
+    console.warn(
+      chalk.yellow('⚠️ 未提供 TELEGRAM_BOT_TOKEN，Telegram 通知功能将不可用。'),
+    );
+  }
+  return _bot;
+};
+
+
+let _transporter = null;
+const getTransporter = () => {
+  if (_transporter) {
+    return _transporter;
+  }
+  if (SMTP_HOST && SMTP_USER && SMTP_PASS && SMTP_FROM) {
+    try {
+      _transporter = nodemailer.createTransport({
+        host: SMTP_HOST,
+        port: SMTP_PORT,
+        secure: SMTP_SECURE,
+        auth: {
+          user: SMTP_USER,
+          pass: SMTP_PASS,
+        },
+        ...(PROXY && { proxy: PROXY }),
+      });
+      _transporter.verify((error, _) => {
+        if (error) {
+          console.error(chalk.red('❌ 初始化 Nodemailer 失败:'), error);
+          _transporter = null;
+        } else {
+          console.log(chalk.green('✅ Nodemailer (Email) 服务已准备就绪。'));
+        }
+      });
+    } catch (error) {
+      console.error(
+        chalk.red('❌ 创建 Nodemailer _transporter 时出错:'),
+        error,
+      );
+    }
+  } else {
+    console.warn(
+      chalk.yellow(
+        '⚠️ 已启用邮件通知 (ENABLE_EMAIL_NOTIFICATIONS=true) 但缺少必要的 SMTP 配置 (HOST, USER, PASS, FROM)。邮件功能将不可用。',
+      ),
+    );
+  }
+  return _transporter;
+};
 
 const sendToTelegram = async (
   isSuccess,
@@ -83,7 +100,7 @@ const sendToTelegram = async (
   description = '',
   promptUsed = '',
 ) => {
-  if (!bot) {
+  if (!getBot()) {
     return;
   }
   if (!TELEGRAM_CHAT_ID) {
@@ -99,12 +116,12 @@ const sendToTelegram = async (
       : `❌ ${description}\n${promptLabel}`;
 
     if (imageUrl) {
-      await bot.sendPhoto(TELEGRAM_CHAT_ID, imageUrl, {
+      await getBot().sendPhoto(TELEGRAM_CHAT_ID, imageUrl, {
         parse_mode: 'Markdown',
         caption: msg,
       });
     } else {
-      await bot.sendMessage(TELEGRAM_CHAT_ID, msg, {
+      await getBot().sendMessage(TELEGRAM_CHAT_ID, msg, {
         parse_mode: 'Markdown',
       });
     }
@@ -125,8 +142,8 @@ const sendToEmail = async (
   originalFilename = '',
   promptUsed = '',
 ) => {
-  if (!transporter || !recipientEmail) {
-    if (recipientEmail && !transporter) {
+  if (!getTransporter() || !recipientEmail) {
+    if (recipientEmail && !getTransporter()) {
       console.warn(
         chalk.yellow(
           `⚠️ 尝试发送邮件到 ${recipientEmail} 但 Nodemailer 未初始化或配置错误。`,
@@ -170,7 +187,7 @@ const sendToEmail = async (
     console.log(
       chalk.blue(`✉️ [后台][Email] 正在发送结果到邮箱: ${recipientEmail}`),
     );
-    let info = await transporter.sendMail(mailOptions);
+    let info = await getTransporter().sendMail(mailOptions);
     console.log(
       chalk.green(
         `✅ [后台][Email] 邮件已成功发送到 ${recipientEmail}. Message ID: ${info.messageId}`,
@@ -470,10 +487,10 @@ function addToProcessQueue(
       const emailNotice = recipientEmail ? ` -> ${recipientEmail}` : '';
       const msg = `⏳ 正在处理任务: ${originalFilename}  ${emailNotice} (队列剩余任务：${queue.pending + queue.size})`;
 
-      if (bot && TELEGRAM_CHAT_ID) {
+      if (getBot() && TELEGRAM_CHAT_ID) {
         try {
           const tgMsg = `⏳ 正在处理任务: ${originalFilename} (队列剩余任务：${queue.pending + queue.size})`;
-          await bot.sendMessage(TELEGRAM_CHAT_ID, tgMsg);
+          await getBot().sendMessage(TELEGRAM_CHAT_ID, tgMsg);
         } catch (tgError) {
           console.error(chalk.red('❌ 发送队列消息到Telegram失败:'), tgError);
         }
