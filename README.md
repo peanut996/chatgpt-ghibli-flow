@@ -2,7 +2,7 @@
 <br> 中文 ｜ <a href="README_EN.md">English</a>
 </p>
 
-# GhibliFlow Image Generator / 吉卜力风格图像生成器
+# 吉卜力风格图像生成器
 
 ## 描述
 
