@@ -1,34 +1,30 @@
 services:
   ghibli-flow-app:
-    # Build the image using the Dockerfile in the current directory (.)
+    image: ghcr.io/peanut996/chatgpt-ghibli-flow:latest
+
+    # The 'build' section is now primarily for local development (`docker-compose build`)
+    # It will be ignored by `docker-compose up -d` when the `image:` tag is present and the image exists locally or is pulled.
     build:
       context: .
       dockerfile: Dockerfile
     # Map port 3000 on the host to port 3000 in the container
+
     ports:
       - "3000:3000"
-    # Mount the external configuration files into the container
-    # :ro makes the mounted files read-only inside the container, which is safer
+    # Mount external configuration files from the HOST (server) into the container
+    # IMPORTANT: These files MUST exist on the server where you run docker-compose
     volumes:
       - ./cookies.json:/app/cookies.json:ro
-      - ./.env:/app/.env:ro # Mount the .env file itself
+      - ./.env:/app/.env:ro
 
-    # Inject environment variables from the host's .env file
-    # Variables here take precedence over those in the mounted /app/.env if the app reads from process.env first
-    env_file:
-      - .env
-    # Additional environment variables needed at runtime
     environment:
-      # Ensures Next.js runs in production mode inside the container
       NODE_ENV: production
-      # Helps with log output compatibility, especially with PM2-like behavior or terminal emulators
-      TERM: dumb
-      # Tell the app where the cookies file is inside the container (matches the volume mount)
-      # This might override the value from the .env file if already set there.
+      TERM: dumb # Good for compatibility
+      # Ensure the app knows where the cookies file is INSIDE the container
       COOKIES_FILE_PATH: /app/cookies.json
-      # Add any other runtime environment variables needed, potentially overriding .env values
-      # e.g., HEADLESS: true
-    # Restart policy: Restart the container unless it was explicitly stopped.
+      # Add any other RUNTIME variables needed by the app that might not be in .env
+      # Example: HEADLESS: true (though this should ideally be in your .env file)
+
     restart: unless-stopped
     # Optional: Add healthcheck if needed
     # healthcheck:
