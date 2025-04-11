@@ -565,6 +565,13 @@ export async function POST(req) {
     finalPromptToUse =
       defaultPrompts[receivedPromptType] || defaultPrompts[PromptType.GHIBLI];
 
+    if (
+      receivedPromptType === PromptType.CUSTOM &&
+      customPromptTextFromRequest
+    ) {
+      finalPromptToUse = customPromptTextFromRequest;
+    }
+
     // Save temp file
     const safeOriginalFilename = path
       .basename(originalFilename)
