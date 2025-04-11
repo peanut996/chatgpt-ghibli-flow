@@ -22,6 +22,9 @@ import {
   COOKIES_PATH,
   SMTP_SECURE,
   EMAIL_REGEX_BACKEND,
+  HEADLESS_MODE,
+  GENERATION_TIMEOUT,
+  UPLOAD_TIMEOUT,
 } from './config.js';
 
 const queue = new PQueue({ concurrency: 1 });
