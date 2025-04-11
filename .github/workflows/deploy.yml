@@ -83,10 +83,6 @@ jobs:
               echo "Error: cookies.json file not found on the server in $(pwd). Deployment aborted."
               exit 1
             fi
-            if [ ! -f "docker-compose.yml" ]; then
-              echo "Error: docker-compose.yml file not found on the server in $(pwd). Deployment aborted."
-              exit 1
-            fi
 
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
@@ -94,8 +90,23 @@ jobs:
 
             docker pull "$IMAGE_TO_PULL"
 
-            docker-compose down
+            echo "Stopping existing container..."
+            docker stop ghibli-flow-app || echo "Container ghibli-flow-app not found or already stopped."
+            echo "Removing existing container..."
+            docker rm ghibli-flow-app || echo "Container ghibli-flow-app not found."
 
-            docker-compose up -d
 
+            echo "Starting new container..."
+            docker run -d \
+              --name ghibli-flow-app \
+              --restart unless-stopped \
+              -p 3000:3000 \
+              -v "${PWD}/cookies.json":/app/cookies.json:ro \
+              -v "${PWD}/.env":/app/.env:ro \
+              -e NODE_ENV=production \
+              -e TERM=dumb \
+              -e COOKIES_FILE_PATH=/app/cookies.json \
+              "$IMAGE_TO_PULL"
+
+            echo "Pruning old images..."
             docker image prune -f

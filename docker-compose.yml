@@ -1,8 +1,10 @@
 services:
   ghibli-flow-app:
-    image: ghcr.io/peanut996/chatgpt-ghibli-flow:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - '3000:3000'
     volumes:
       - ./cookies.json:/app/cookies.json:ro
       - ./.env:/app/.env:ro
