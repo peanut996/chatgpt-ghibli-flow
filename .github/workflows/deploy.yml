@@ -63,7 +63,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          no-cache: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: SSH into Server and Deploy
         uses: appleboy/ssh-action@v1.0.3
@@ -110,3 +111,4 @@ jobs:
 
             echo "Pruning old images..."
             docker image prune -f
+            echo "🚀 Deployment completed successfully."
