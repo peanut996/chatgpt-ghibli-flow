@@ -8,28 +8,17 @@ import TelegramBot from 'node-telegram-bot-api';
 import nodemailer from 'nodemailer';
 import chalk from 'chalk';
 import PQueue from 'p-queue';
-import { PromptType, defaultPrompts } from './config.js';
-
-const COOKIES_PATH = path.resolve(
-  process.env.COOKIES_FILE_PATH || './cookies.json',
-);
-const proxy = process.env.PROXY || '';
-const HEADLESS_MODE = process.env.HEADLESS !== 'false';
-const UPLOAD_TIMEOUT = parseInt(process.env.UPLOAD_TIMEOUT || '20000', 10);
-const GENERATION_TIMEOUT = parseInt(
-  process.env.GENERATION_TIMEOUT || '240000',
-  10,
-);
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-
-const SMTP_HOST = 'smtp.gmail.com';
-const SMTP_PORT = 587;
-const SMTP_SECURE = false;
-const SMTP_USER = process.env.SMTP_USER;
-const SMTP_PASS = process.env.SMTP_PASS;
-const SMTP_FROM = 'GhibliFlow Bot <no-reply@example.com>';
-const EMAIL_REGEX_BACKEND = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import {
+  PromptType,
+  defaultPrompts,
+  TELEGRAM_BOT_TOKEN,
+  PROXY,
+  SMTP_HOST,
+  SMTP_USER,
+  SMTP_PASS,
+  SMTP_FROM,
+  SMTP_PORT,
+} from './config.js';
 
 const queue = new PQueue({ concurrency: 1 });
 
@@ -38,7 +27,7 @@ if (TELEGRAM_BOT_TOKEN) {
   try {
     bot = new TelegramBot(TELEGRAM_BOT_TOKEN, {
       polling: false,
-      ...(proxy && { request: { proxy } }),
+      ...(PROXY && { request: { PROXY } }),
     });
   } catch (error) {
     console.error(chalk.red('❌ 初始化 Telegram Bot 失败:'), error.message);
@@ -60,9 +49,9 @@ if (SMTP_HOST && SMTP_USER && SMTP_PASS && SMTP_FROM) {
         user: SMTP_USER,
         pass: SMTP_PASS,
       },
-      ...(proxy && { proxy: proxy }),
+      ...(PROXY && { proxy: PROXY }),
     });
-    transporter.verify((error, success) => {
+    transporter.verify((error, _) => {
       if (error) {
         console.error(chalk.red('❌ 初始化 Nodemailer 失败:'), error);
         transporter = null;
@@ -471,7 +460,6 @@ function addToProcessQueue(
 ) {
   queue
     .add(async () => {
-      const promptSnippet = finalPromptToUse;
       const emailNotice = recipientEmail ? ` -> ${recipientEmail}` : '';
       const msg = `⏳ 处理任务加入队列: ${originalFilename}  ${emailNotice} (队列剩余任务：${queue.pending + queue.size})`;
 
