@@ -3,45 +3,38 @@ name: CI/CD
 on:
   push:
     branches:
-      - master # 当推送到 main 分支时触发
+      - master
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/chatgpt-ghibli-flow
 
-
 jobs:
   ci-check-and-deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: read       # To checkout the code
-      packages: write     # To push images to GHCR
+      contents: read
+      packages: write
 
     steps:
-      # 1. CI 阶段：代码检出和环境准备
-      - name: Checkout Code (检出代码)
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js (设置 Node.js 环境)
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # 根据你的 .nvmrc 文件设置
+          node-version: '20'
 
-      - name: Setup PNPM (设置 PNPM)
+      - name: Setup PNPM
         uses: pnpm/action-setup@v4
         with:
           version: latest
 
-      # 2. CI 阶段：安装所有依赖 (包括 devDependencies 用于检查)
-      - name: Install All Dependencies (安装所有依赖)
+      - name: Install All Dependencies
         run: pnpm install --frozen-lockfile
-        # 注意：这里安装所有依赖，因为 lint 和 build 可能需要 devDependencies
 
-      # 4. CI 阶段：运行构建测试 (确认代码可以成功构建)
-      - name: Build Application Check (构建检查)
+      - name: Build Application Check
         run: pnpm build
-        # 注意：这里的构建只是为了检查代码是否能成功构建。
-        # 实际部署到服务器时，你的 DEPLOY_COMMAND 秘密里仍然包含服务器端的构建步骤。
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -60,8 +53,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha # Tag with the git commit SHA (short format)
-            type=raw,value=latest,enable={{is_default_branch}} # Tag with 'latest' only on default branch (master)
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -70,7 +63,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha # Enable GitHub Actions cache for faster builds
+          cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: SSH into Server and Deploy
@@ -81,11 +74,8 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || '22' }}
           script: |
-            echo "Attempting deployment on server..."
             cd ${{ secrets.PROJECT_PATH_ON_SERVER }} || { echo "Failed to cd into project directory"; exit 1; }
 
-            echo "Ensuring required files exist..."
-            # Check if essential files exist on the server before proceeding
             if [ ! -f ".env" ]; then
               echo "Error: .env file not found on the server in $(pwd). Deployment aborted."
               exit 1
@@ -99,29 +89,14 @@ jobs:
               exit 1
             fi
 
-            echo "Logging into GitHub Container Registry on server..."
-            # Login to GHCR using a Personal Access Token (PAT) stored as a secret
-            # IMPORTANT: Create a PAT with 'read:packages' scope and store it as GHCR_PAT secret
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # Define the full image name to pull (using the 'latest' tag for simplicity)
-            # You could also use: IMAGE_TO_PULL="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" for specific commit deployment
             IMAGE_TO_PULL="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
 
-            echo "Pulling the latest Docker image: $IMAGE_TO_PULL"
             docker pull "$IMAGE_TO_PULL"
 
-            echo "Stopping and removing existing containers defined in docker-compose.yml..."
-            # This assumes your docker-compose.yml defines the service 'ghibli-flow-app'
             docker-compose down
 
-            echo "Starting the application with the new image using docker-compose..."
-            # docker-compose up will use the 'image:' tag defined in docker-compose.yml
-            # The '-d' flag runs it in detached mode (background)
             docker-compose up -d
 
-            echo "Cleaning up unused Docker images..."
-            # Remove dangling images (optional, helps save disk space)
             docker image prune -f
-
-            echo "Deployment script finished."

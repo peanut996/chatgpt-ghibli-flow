@@ -1,8 +1,3 @@
-// src/app/api/process-image/promptConfig.js
-
-/**
- * Enum defining the available prompt types.
- */
 export const PromptType = {
   GHIBLI: 'ghibli',
   CAT_HUMAN: 'cat-human',
@@ -11,10 +6,6 @@ export const PromptType = {
   CUSTOM: 'custom',
 };
 
-/**
- * Default prompt texts associated with predefined types.
- * These can be overridden by environment variables.
- */
 export const defaultPrompts = {
   [PromptType.GHIBLI]:
     process.env.PROMPT_GHIBLI ||

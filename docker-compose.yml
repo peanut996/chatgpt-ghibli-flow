@@ -1,35 +1,16 @@
 services:
   ghibli-flow-app:
     image: ghcr.io/peanut996/chatgpt-ghibli-flow:latest
-
-    # The 'build' section is now primarily for local development (`docker-compose build`)
-    # It will be ignored by `docker-compose up -d` when the `image:` tag is present and the image exists locally or is pulled.
     build:
       context: .
       dockerfile: Dockerfile
-    # Map port 3000 on the host to port 3000 in the container
-
     ports:
       - "3000:3000"
-    # Mount external configuration files from the HOST (server) into the container
-    # IMPORTANT: These files MUST exist on the server where you run docker-compose
     volumes:
       - ./cookies.json:/app/cookies.json:ro
       - ./.env:/app/.env:ro
-
     environment:
       NODE_ENV: production
-      TERM: dumb # Good for compatibility
-      # Ensure the app knows where the cookies file is INSIDE the container
+      TERM: dumb
       COOKIES_FILE_PATH: /app/cookies.json
-      # Add any other RUNTIME variables needed by the app that might not be in .env
-      # Example: HEADLESS: true (though this should ideally be in your .env file)
-
     restart: unless-stopped
-    # Optional: Add healthcheck if needed
-    # healthcheck:
-    #   test: ["CMD", "curl", "--fail", "http://localhost:3000"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
-    #   start_period: 30s # Give the app time to start before first check

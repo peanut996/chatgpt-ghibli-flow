@@ -1,10 +1,5 @@
 #!/bin/bash
-# This script is used to install Docker on a Linux system.
-# It first checks if Docker is already installed, and if not, it installs it.
-# It also provides a dry run option to see what would be done without actually doing it.
-# Usage: ./deploy.sh [--dry-run]
 
-# Check for .env and cookies.json files
 if [ ! -f ".env" ]; then
   echo "Error: .env file not found. Please create one."
   exit 1
@@ -15,7 +10,6 @@ if [ ! -f "cookies.json" ]; then
   exit 1
 fi
 
-# Check if Docker is already installed
 if command -v docker &> /dev/null
 then
   echo "Docker is already installed."
@@ -26,7 +20,6 @@ else
   echo "Docker installed successfully."
 fi
 
-# Check if Docker Compose is already installed
 if command -v docker-compose &> /dev/null
 then
   echo "Docker Compose is already installed."
@@ -51,4 +44,3 @@ docker system prune -f
 echo "Clean unused docker container and image completed."
 
 echo "🎉 Application deployed successfully!"
-

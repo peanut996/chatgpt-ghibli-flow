@@ -10,7 +10,6 @@ import chalk from 'chalk';
 import PQueue from 'p-queue';
 import { PromptType, defaultPrompts } from './config.js';
 
-// --- Configuration ---
 const COOKIES_PATH = path.resolve(
   process.env.COOKIES_FILE_PATH || './cookies.json',
 );
@@ -18,25 +17,22 @@ const proxy = process.env.PROXY || '';
 const HEADLESS_MODE = process.env.HEADLESS !== 'false';
 const UPLOAD_TIMEOUT = parseInt(process.env.UPLOAD_TIMEOUT || '20000', 10);
 const GENERATION_TIMEOUT = parseInt(
-  process.env.GENERATION_TIMEOUT || '240000', // 4 minutes
+  process.env.GENERATION_TIMEOUT || '240000',
   10,
 );
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
-// --- NEW: Email Configuration ---
 const SMTP_HOST = 'smtp.gmail.com';
 const SMTP_PORT = 587;
-const SMTP_SECURE = false; // Use true for port 465, false for 587
+const SMTP_SECURE = false;
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 const SMTP_FROM = 'GhibliFlow Bot <no-reply@example.com>';
-const EMAIL_REGEX_BACKEND = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Backend validation regex
+const EMAIL_REGEX_BACKEND = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Initialize PQueue
 const queue = new PQueue({ concurrency: 1 });
 
-// --- Telegram Bot Setup ---
 let bot = null;
 if (TELEGRAM_BOT_TOKEN) {
   try {
@@ -59,18 +55,17 @@ if (SMTP_HOST && SMTP_USER && SMTP_PASS && SMTP_FROM) {
     transporter = nodemailer.createTransport({
       host: SMTP_HOST,
       port: SMTP_PORT,
-      secure: SMTP_SECURE, // true for 465, false for other ports
+      secure: SMTP_SECURE,
       auth: {
         user: SMTP_USER,
-        pass: SMTP_PASS, // Consider using App Passwords for Gmail
+        pass: SMTP_PASS,
       },
       ...(proxy && { proxy: proxy }),
     });
-    // Verify connection configuration
     transporter.verify((error, success) => {
       if (error) {
         console.error(chalk.red('❌ 初始化 Nodemailer 失败:'), error);
-        transporter = null; // Disable email if verification fails
+        transporter = null;
       } else {
         console.log(chalk.green('✅ Nodemailer (Email) 服务已准备就绪。'));
       }
@@ -129,7 +124,7 @@ const sendToTelegram = async (
 
 const sendToEmail = async (
   isSuccess,
-  content, // URL for success, error message for failure
+  content,
   recipientEmail,
   originalFilename = '',
   promptUsed = '',
@@ -193,7 +188,6 @@ const sendToEmail = async (
   }
 };
 
-// --- Puppeteer 浏览器实例管理 (Keep as is) ---
 let browserInstance = null;
 let isBrowserLaunching = false;
 async function getBrowser() {
@@ -347,13 +341,13 @@ async function processImageInBackground(
     console.log(chalk.green(`📤 处理图片: ${originalFilename}`));
 
     const fileInputSelector = 'input[type="file"]';
-    await page.waitForSelector(fileInputSelector, { timeout: UPLOAD_TIMEOUT }); // Use configured timeout
+    await page.waitForSelector(fileInputSelector, { timeout: UPLOAD_TIMEOUT });
     const fileInput = await page.$(fileInputSelector);
     await fileInput.uploadFile(uploadedFilePath);
-    await countdown('等待文件上传完成', 15000); // Consider making this configurable too
+    await countdown('等待文件上传完成', 15000);
 
     await page.type('textarea', finalPromptToUse, { delay: 50 });
-    await countdown('等待输入完成', 5000); // Consider making this configurable
+    await countdown('等待输入完成', 5000);
     await page.keyboard.press('Enter');
 
     const stopGeneratingSelector = 'button[aria-label*="Stop streaming"]';
@@ -438,8 +432,8 @@ async function processImageInBackground(
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error(
       chalk.red(`❌ [后台] 处理 ${originalFilename} 时出错:`),
-      errorMsg, // Log the message
-      error.stack, // Log the stack for more details if needed
+      errorMsg,
+      error.stack,
     );
     const err = `[${originalFilename}](${imageUrl}) \n\n❌ 错误: ${errorMsg}`;
     sendToTelegram(false, null, err, finalPromptToUse);
@@ -481,10 +475,8 @@ function addToProcessQueue(
       const emailNotice = recipientEmail ? ` -> ${recipientEmail}` : '';
       const msg = `⏳ 处理任务加入队列: ${originalFilename}  ${emailNotice} (队列剩余任务：${queue.pending + queue.size})`;
 
-      // Send queue message to Telegram (optional, keep if useful)
       if (bot && TELEGRAM_CHAT_ID) {
         try {
-          // Avoid sending email address to Telegram group for privacy
           const tgMsg = `⏳ 处理任务加入队列: ${originalFilename} (队列剩余任务：${queue.pending + queue.size})`;
           await bot.sendMessage(TELEGRAM_CHAT_ID, tgMsg);
         } catch (tgError) {
@@ -503,7 +495,6 @@ function addToProcessQueue(
     .catch((error) => {
       const errorMsg = error instanceof Error ? error.message : String(error);
       console.error(chalk.red('💥 [队列] 处理任务时发生顶层错误:'), error);
-      // Send error notifications
       sendToTelegram(
         false,
         null,
@@ -513,7 +504,6 @@ function addToProcessQueue(
     });
 }
 
-// --- API Route Handler ---
 export async function POST(req) {
   if (req.method !== 'POST') {
     return NextResponse.json(
@@ -558,7 +548,6 @@ export async function POST(req) {
       ),
     );
 
-    // Determine the final prompt based on type
     receivedPromptType = promptTypeFromRequest || PromptType.GHIBLI;
     console.log(chalk.blue(`ℹ️ 请求的 Prompt 类型: ${receivedPromptType}`));
 
@@ -572,7 +561,6 @@ export async function POST(req) {
       finalPromptToUse = customPromptTextFromRequest;
     }
 
-    // Save temp file
     const safeOriginalFilename = path
       .basename(originalFilename)
       .replace(/[^a-zA-Z0-9.\-_]/g, '_');
