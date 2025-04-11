@@ -18,6 +18,10 @@ import {
   SMTP_PASS,
   SMTP_FROM,
   SMTP_PORT,
+  TELEGRAM_CHAT_ID,
+  COOKIES_PATH,
+  SMTP_SECURE,
+  EMAIL_REGEX_BACKEND,
 } from './config.js';
 
 const queue = new PQueue({ concurrency: 1 });
