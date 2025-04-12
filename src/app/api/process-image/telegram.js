@@ -74,7 +74,7 @@ export const sendToTelegram = async (
   }
 };
 
-export const sendPhotoToTelegram = async (
+export const trySendPhotoOrMessage = async (
   photoPath,
   message,
   originalFilename,
@@ -86,18 +86,28 @@ export const sendPhotoToTelegram = async (
     logger.error(chalk.red('❌ 环境变量中未设置 TELEGRAM_CHAT_ID。'));
     return;
   }
+  let success = false;
   try {
     await getBot().sendPhoto(
       TELEGRAM_CHAT_ID,
       photoPath,
       {
         caption: message,
-        parse_mode: 'Markdown',
       },
       {
         filename: originalFilename,
       },
     );
+    success = true;
+  } catch (error) {
+    logger.error(chalk.red(`❌ [后台][TG] 发送图片到 Telegram 失败:`), error);
+  }
+  if (success) {
+    return;
+  }
+
+  try {
+    await getBot().sendMessage(TELEGRAM_CHAT_ID, message);
   } catch (error) {
     logger.error(chalk.red(`❌ [后台][TG] 发送消息到 Telegram 失败:`), error);
   }
