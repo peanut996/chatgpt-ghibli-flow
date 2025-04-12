@@ -8,10 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 清理 GHCR
-        uses: lukaszx0/ghcr-cleaner@main
+        uses: quartx-analytics/ghcr-cleaner@v1
         with:
+          owner-type: user
           token: ${{ secrets.GHCR_CLEANUP_TOKEN }}
-          repository-owner: ${{ github.repository_owner }}
-          owner-type: org  # 或者 user
-          delete-untagged: true
-          keep-at-most: 5 # 保留最新的 5 个镜像版本
+          repository_owner: ${{ github.repository_owner }}
+          repository-name: ${{ github.repository }}
+          keep-at-most: 5
