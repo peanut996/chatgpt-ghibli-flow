@@ -10,6 +10,7 @@ import {
   addToProcessQueue,
   getQueueSize,
 } from '@/app/api/process-image/queue.js';
+import logger from '@/app/api/process-image/logger.js';
 
 export async function POST(req) {
   if (req.method !== 'POST') {

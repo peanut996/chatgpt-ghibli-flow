@@ -5,8 +5,12 @@ import {
 } from '@/app/api/process-image/config.js';
 import chalk from 'chalk';
 import TelegramBot from 'node-telegram-bot-api';
-import logger from '@/app/api/logger.js';
+import logger from '@/app/api/process-image/logger.js';
 import fs from 'fs/promises';
+
+process.env.NTBA_FIX_319 = 1;
+process.env.NTBA_FIX_350 = 0;
+
 
 let _bot = null;
 
@@ -72,7 +76,11 @@ export const sendToTelegram = async (
   }
 };
 
-export const sendPhotoToTelegram = async (photoPath, message) => {
+export const sendPhotoToTelegram = async (
+  photoPath,
+  message,
+  originalFilename,
+) => {
   if (!getBot()) {
     return;
   }
@@ -82,10 +90,17 @@ export const sendPhotoToTelegram = async (photoPath, message) => {
   }
   try {
     const buff = await fs.readFile(photoPath);
-    await getBot().sendPhoto(TELEGRAM_CHAT_ID, buff, {
-      caption: message,
-      parse_mode: 'Markdown',
-    });
+    await getBot().sendPhoto(
+      TELEGRAM_CHAT_ID,
+      buff,
+      {
+        caption: message,
+        parse_mode: 'Markdown',
+      },
+      {
+        filename: originalFilename,
+      },
+    );
   } catch (error) {
     logger.error(chalk.red(`❌ [后台][TG] 发送消息到 Telegram 失败:`), error);
   }

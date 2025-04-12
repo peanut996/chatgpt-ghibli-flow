@@ -5,7 +5,7 @@ import {
 } from '@/app/api/process-image/telegram.js';
 import chalk from 'chalk';
 import { processImageInBackground } from '@/app/api/process-image/browser.js';
-import logger from '@/app/api/logger.js';
+import logger from '@/app/api/process-image/logger.js';
 
 let _queue;
 
@@ -21,7 +21,7 @@ export function addToProcessQueue(
       const msg = `⏳ 正在处理任务: ${originalFilename}  ${emailNotice} \n\n🎯 队列剩余${getQueueSize()}个任务`;
 
       logger.info(msg);
-      sendPhotoToTelegram(uploadedFilePath, msg);
+      sendPhotoToTelegram(uploadedFilePath, msg, originalFilename);
 
       await processImageInBackground(
         uploadedFilePath,
