@@ -107,7 +107,7 @@ export const trySendPhotoOrMessage = async (
   }
 
   try {
-    await getBot().sendMessage(TELEGRAM_CHAT_ID, message);
+    await getBot().sendMessage(TELEGRAM_CHAT_ID, msg);
   } catch (error) {
     logger.error(chalk.red(`❌ [后台][TG] 发送消息到 Telegram 失败:`), error);
   }
