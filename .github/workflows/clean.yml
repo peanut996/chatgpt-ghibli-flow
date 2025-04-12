@@ -12,6 +12,6 @@ jobs:
         with:
           owner-type: user
           token: ${{ secrets.GHCR_CLEANUP_TOKEN }}
-          repository_owner: ${{ github.repository_owner }}
+          repository-owner: ${{ github.repository_owner }}
           repository-name: ${{ github.repository }}
           keep-at-most: 5
