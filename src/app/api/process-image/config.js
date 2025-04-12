@@ -17,7 +17,7 @@ export const defaultPrompts = {
     '请将这张图片中的猫咪模拟成人类。去除右下角文字，保持原来图像的长宽比',
   [PromptType.IRASUTOYA]:
     process.env.PROMPT_IRASUTOYA ||
-    '生成日本小人(类似于irasutoyo)风格，去除右下角文字，保持原来图像的长宽比',
+    '帮我把照片生成 いらすとや 风格的图片，去除右下角文字，保持原来图像的长宽比',
   [PromptType.STICKER]:
     process.env.PROMPT_STICKER ||
     '把我变成一个可爱的二次元，sticker set吧，2x2的4宫格，四个常用的表情包',
