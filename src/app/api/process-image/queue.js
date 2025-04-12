@@ -54,5 +54,5 @@ export const getQueue = () => {
 };
 
 export const getQueueSize = () => {
-  return _queue ? _queue.size : 0;
+  return _queue ? _queue.size + _queue.pending : 0;
 };
