@@ -1,0 +1,17 @@
+name: GHCR Cleanup
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 清理 GHCR
+        uses: lukaszx0/ghcr-cleaner@main
+        with:
+          token: ${{ secrets.GHCR_CLEANUP_TOKEN }}
+          repository-owner: ${{ github.repository_owner }}
+          owner-type: org  # 或者 user
+          delete-untagged: true
+          keep-at-most: 5 # 保留最新的 5 个镜像版本
