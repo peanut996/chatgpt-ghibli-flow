@@ -6,11 +6,9 @@ import {
 import chalk from 'chalk';
 import TelegramBot from 'node-telegram-bot-api';
 import logger from '@/app/api/process-image/logger.js';
-import fs from 'fs/promises';
 
 process.env.NTBA_FIX_319 = 1;
 process.env.NTBA_FIX_350 = 0;
-
 
 let _bot = null;
 
@@ -89,10 +87,9 @@ export const sendPhotoToTelegram = async (
     return;
   }
   try {
-    const buff = await fs.readFile(photoPath);
     await getBot().sendPhoto(
       TELEGRAM_CHAT_ID,
-      buff,
+      photoPath,
       {
         caption: message,
         parse_mode: 'Markdown',
