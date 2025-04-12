@@ -5,6 +5,7 @@ import {
 } from '@/app/api/process-image/config.js';
 import chalk from 'chalk';
 import TelegramBot from 'node-telegram-bot-api';
+import logger from '@/app/api/logger.js';
 
 let _bot = null;
 
@@ -67,5 +68,20 @@ export const sendToTelegram = async (
       chalk.red(`❌ [后台][TG] 发送处理结果到 Telegram 失败:`),
       error,
     );
+  }
+};
+
+export const sendMessageToTelegram = async (message) => {
+  if (!getBot()) {
+    return;
+  }
+  if (!TELEGRAM_CHAT_ID) {
+    logger.error(chalk.red('❌ 环境变量中未设置 TELEGRAM_CHAT_ID。'));
+    return;
+  }
+  try {
+    await getBot().sendMessage(TELEGRAM_CHAT_ID, message);
+  } catch (error) {
+    logger.error(chalk.red(`❌ [后台][TG] 发送消息到 Telegram 失败:`), error);
   }
 };
