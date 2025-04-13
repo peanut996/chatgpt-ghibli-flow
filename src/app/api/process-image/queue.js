@@ -3,7 +3,6 @@ import {
   trySendPhotoOrMessage,
   sendToTelegram,
 } from '@/app/api/process-image/telegram.js';
-import chalk from 'chalk';
 import { processImageInBackground } from '@/app/api/process-image/browser.js';
 import logger from '@/app/api/process-image/logger.js';
 
@@ -32,7 +31,7 @@ export function addToProcessQueue(
     })
     .catch((error) => {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      console.error(chalk.red('💥 [队列] 处理任务时发生顶层错误:'), error);
+      logger.error('💥 [队列] 处理任务时发生顶层错误:', error);
       sendToTelegram(
         false,
         null,

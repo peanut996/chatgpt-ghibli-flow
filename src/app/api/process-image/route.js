@@ -3,7 +3,6 @@ import path from 'path';
 import fs from 'fs/promises';
 import os from 'os';
 import crypto from 'crypto';
-import chalk from 'chalk';
 import { defaultPrompts, EMAIL_REGEX_BACKEND, PromptType } from './config.js';
 import { sendToTelegram } from '@/app/api/process-image/telegram.js';
 import {
@@ -19,7 +18,7 @@ export async function POST(req) {
       { status: 405, headers: { Allow: 'POST' } },
     );
   }
-  console.log(chalk.cyan(`\n--- 收到新请求 ---`));
+  logger.info(`--- 收到新请求 ---`);
   let tempFilePath = null;
   let receivedPromptType = PromptType.GHIBLI;
   let finalPromptToUse = defaultPrompts[PromptType.GHIBLI];
@@ -35,6 +34,7 @@ export async function POST(req) {
     emailFromRequest = formData.get('email')?.toString() || null;
 
     if (!imageFile || !(imageFile instanceof File)) {
+      logger.error("请求中缺少 'image' 文件字段。");
       return NextResponse.json(
         { success: false, error: "请求中缺少 'image' 文件字段。" },
         { status: 400 },
@@ -42,7 +42,7 @@ export async function POST(req) {
     }
 
     if (emailFromRequest && !EMAIL_REGEX_BACKEND.test(emailFromRequest)) {
-      console.error(chalk.red(`❌ 无效的邮箱地址格式: ${emailFromRequest}`));
+      logger.error(`❌ 无效的邮箱地址格式: ${emailFromRequest}`);
       return NextResponse.json(
         { success: false, error: '提供的邮箱地址格式无效。' },
         { status: 400 },
@@ -50,14 +50,12 @@ export async function POST(req) {
     }
 
     const originalFilename = imageFile.name || `upload_${Date.now()}`;
-    console.log(
-      chalk.blue(
-        `📄 收到文件: ${originalFilename}, 类型: ${imageFile.type}, 大小: ${imageFile.size} bytes ${emailFromRequest ? `(邮箱: ${emailFromRequest})` : ''}`,
-      ),
+    logger.info(
+      `📄 收到文件: ${originalFilename}, 类型: ${imageFile.type}, 大小: ${imageFile.size} bytes ${emailFromRequest ? `(邮箱: ${emailFromRequest})` : ''}`,
     );
 
     receivedPromptType = promptTypeFromRequest || PromptType.GHIBLI;
-    console.log(chalk.blue(`ℹ️ 请求的 Prompt 类型: ${receivedPromptType}`));
+    logger.info(`ℹ️ 请求的 Prompt 类型: ${receivedPromptType}`);
 
     finalPromptToUse =
       defaultPrompts[receivedPromptType] || defaultPrompts[PromptType.GHIBLI];
@@ -80,11 +78,11 @@ export async function POST(req) {
       `ghibliflow-${Date.now()}-${uniqueSuffix}-${safeOriginalFilename}`,
     );
 
-    console.log(chalk.gray(`  写入临时文件到: ${tempFilePath}`));
+    logger.debug(`写入临时文件到: ${tempFilePath}`);
     await fs.writeFile(tempFilePath, fileBuffer);
-    console.log(chalk.green(`✅ 临时文件写入成功。`));
+    logger.info(`✅ 临时文件写入成功。`);
 
-    console.log(chalk.green(`✅ 文件接收并保存成功，添加到处理队列。`));
+    logger.info(`✅ 文件接收并保存成功，添加到处理队列。`);
 
     addToProcessQueue(
       tempFilePath,
@@ -108,13 +106,13 @@ export async function POST(req) {
     );
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error(chalk.red('❌ API 处理程序错误 (文件接收/解析阶段):'), error);
+    logger.error('❌ API 处理程序错误 (文件接收/解析阶段):', error);
     if (tempFilePath) {
       await fs
         .unlink(tempFilePath)
         .catch((cleanupError) =>
-          console.error(
-            chalk.yellow(`⚠️ [API错误后] 清理临时文件 ${tempFilePath} 失败:`),
+          logger.warn(
+            `⚠️ [API错误后] 清理临时文件 ${tempFilePath} 失败:`,
             cleanupError,
           ),
         );

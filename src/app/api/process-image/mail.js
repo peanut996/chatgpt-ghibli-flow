@@ -8,7 +8,7 @@ import {
   SMTP_USER,
 } from '@/app/api/process-image/config.js';
 import nodemailer from 'nodemailer';
-import chalk from 'chalk';
+import logger from '@/app/api/process-image/logger.js';
 
 let _transporter = null;
 const getTransporter = () => {
@@ -29,23 +29,18 @@ const getTransporter = () => {
       });
       _transporter.verify((error, _) => {
         if (error) {
-          console.error(chalk.red('❌ 初始化 Nodemailer 失败:'), error);
+          logger.error('❌ 初始化 Nodemailer 失败:', error);
           _transporter = null;
         } else {
-          console.log(chalk.green('✅ Nodemailer (Email) 服务已准备就绪。'));
+          logger.info('✅ Nodemailer (Email) 服务已准备就绪。');
         }
       });
     } catch (error) {
-      console.error(
-        chalk.red('❌ 创建 Nodemailer _transporter 时出错:'),
-        error,
-      );
+      logger.error('❌ 创建 Nodemailer _transporter 时出错:', error);
     }
   } else {
-    console.warn(
-      chalk.yellow(
-        '⚠️ 已启用邮件通知 (ENABLE_EMAIL_NOTIFICATIONS=true) 但缺少必要的 SMTP 配置 (HOST, USER, PASS, FROM)。邮件功能将不可用。',
-      ),
+    logger.warn(
+      '⚠️ 已启用邮件通知 (ENABLE_EMAIL_NOTIFICATIONS=true) 但缺少必要的 SMTP 配置 (HOST, USER, PASS, FROM)。邮件功能将不可用。',
     );
   }
   return _transporter;
@@ -60,10 +55,8 @@ export const sendToEmail = async (
 ) => {
   if (!getTransporter() || !recipientEmail) {
     if (recipientEmail && !getTransporter()) {
-      console.warn(
-        chalk.yellow(
-          `⚠️ 尝试发送邮件到 ${recipientEmail} 但 Nodemailer 未初始化或配置错误。`,
-        ),
+      logger.warn(
+        `⚠️ 尝试发送邮件到 ${recipientEmail} 但 Nodemailer 未初始化或配置错误。`,
       );
     }
     return;
@@ -100,19 +93,12 @@ export const sendToEmail = async (
   };
 
   try {
-    console.log(
-      chalk.blue(`✉️ [后台][Email] 正在发送结果到邮箱: ${recipientEmail}`),
-    );
+    logger.info(`✉️ [后台][Email] 正在发送结果到邮箱: ${recipientEmail}`);
     let info = await getTransporter().sendMail(mailOptions);
-    console.log(
-      chalk.green(
-        `✅ [后台][Email] 邮件已成功发送到 ${recipientEmail}. Message ID: ${info.messageId}`,
-      ),
+    logger.info(
+      `✅ [后台][Email] 邮件已成功发送到 ${recipientEmail}. Message ID: ${info.messageId}`,
     );
   } catch (error) {
-    console.error(
-      chalk.red(`❌ [后台][Email] 发送邮件到 ${recipientEmail} 失败:`),
-      error,
-    );
+    logger.error(`❌ [后台][Email] 发送邮件到 ${recipientEmail} 失败:`, error);
   }
 };

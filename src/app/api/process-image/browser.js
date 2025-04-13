@@ -1,4 +1,3 @@
-import chalk from 'chalk';
 import {
   COOKIES_PATH,
   GENERATION_TIMEOUT,
@@ -10,6 +9,7 @@ import fs from 'fs/promises';
 import { countdown } from '@/app/api/process-image/util.js';
 import { sendToTelegram } from '@/app/api/process-image/telegram.js';
 import { sendToEmail } from '@/app/api/process-image/mail.js';
+import logger from '@/app/api/process-image/logger.js';
 
 let browserInstance = null;
 let isBrowserLaunching = false;
@@ -18,12 +18,10 @@ export async function getBrowser() {
   if (browserInstance) {
     try {
       await browserInstance.version();
-      console.log(chalk.gray(' puppeteer: 重用现有浏览器实例。'));
+      logger.debug('puppeteer: 重用现有浏览器实例。');
       return browserInstance;
     } catch (e) {
-      console.warn(
-        chalk.yellow(' puppeteer: 浏览器似乎已断开连接，正在启动新的实例。'),
-      );
+      logger.warn('puppeteer: 浏览器似乎已断开连接，正在启动新的实例。');
       try {
         await browserInstance.close();
       } catch (_) {}
@@ -31,7 +29,7 @@ export async function getBrowser() {
     }
   }
   if (isBrowserLaunching) {
-    console.log(chalk.gray(' puppeteer: 等待浏览器启动...'));
+    logger.debug('puppeteer: 等待浏览器启动...');
     while (isBrowserLaunching) {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
@@ -39,17 +37,13 @@ export async function getBrowser() {
     return browserInstance;
   }
   isBrowserLaunching = true;
-  console.log(
-    chalk.blue(
-      `🚀 puppeteer: 正在启动新浏览器 (Headless: ${HEADLESS_MODE})...`,
-    ),
-  );
+  logger.info(`🚀 puppeteer: 正在启动新浏览器 (Headless: ${HEADLESS_MODE})...`);
   try {
-    console.log(chalk.gray(' Dynamically importing StealthPlugin...'));
+    logger.debug('Dynamically importing StealthPlugin...');
     const StealthPlugin = (await import('puppeteer-extra-plugin-stealth'))
       .default;
     puppeteer.use(StealthPlugin());
-    console.log(chalk.green(' StealthPlugin applied.'));
+    logger.info('StealthPlugin applied.');
 
     const newBrowser = await puppeteer.launch({
       headless: HEADLESS_MODE,
@@ -64,7 +58,7 @@ export async function getBrowser() {
         '--disable-gpu',
       ],
     });
-    console.log(chalk.green('✅ puppeteer: 浏览器启动成功。'));
+    logger.info('✅ puppeteer: 浏览器启动成功。');
 
     if (
       !(await fs
@@ -72,30 +66,28 @@ export async function getBrowser() {
         .then(() => true)
         .catch(() => false))
     ) {
-      console.error(chalk.red(`❌ Cookies 文件未找到: ${COOKIES_PATH}`));
+      logger.error(`❌ Cookies 文件未找到: ${COOKIES_PATH}`);
       await newBrowser.close();
       throw new Error(`Cookies 文件未找到于 ${COOKIES_PATH}`);
     } else {
-      console.log(chalk.blue(`🍪 正在从以下位置加载 cookies: ${COOKIES_PATH}`));
+      logger.info(`🍪 正在从以下位置加载 cookies: ${COOKIES_PATH}`);
       const cookiesData = await fs.readFile(COOKIES_PATH, 'utf-8');
       const cookies = JSON.parse(cookiesData);
       const tempPage = await newBrowser.newPage();
       if (Array.isArray(cookies)) {
         await tempPage.setCookie(...cookies);
       } else {
-        console.warn(
-          chalk.yellow(`⚠️ Cookies 文件格式似乎不正确，期望是一个数组。`),
-        );
+        logger.warn(`⚠️ Cookies 文件格式似乎不正确，期望是一个数组。`);
       }
       await tempPage.close();
-      console.log(chalk.green('✅ Cookies 加载完成。'));
+      logger.info('✅ Cookies 加载完成。');
     }
 
     browserInstance = newBrowser;
     isBrowserLaunching = false;
     return browserInstance;
   } catch (error) {
-    console.error(chalk.red('❌ puppeteer: 启动或初始化浏览器失败:'), error);
+    logger.error('❌ puppeteer: 启动或初始化浏览器失败:', error);
     isBrowserLaunching = false;
     browserInstance = null;
     throw error;
@@ -108,10 +100,8 @@ export async function processImageInBackground(
   finalPromptToUse,
   recipientEmail,
 ) {
-  console.log(
-    chalk.cyan(
-      `--- [后台] 开始处理: ${originalFilename} (Prompt: ${finalPromptToUse || '无'}) ${recipientEmail ? `(通知邮箱: ${recipientEmail})` : ''} ---`,
-    ),
+  logger.info(
+    `--- [后台] 开始处理: ${originalFilename} (Prompt: ${finalPromptToUse || '无'}) ${recipientEmail ? `(通知邮箱: ${recipientEmail})` : ''} ---`,
   );
   let browser = null;
   let page = null;
@@ -123,7 +113,7 @@ export async function processImageInBackground(
       waitUntil: 'networkidle2',
       timeout: 90000,
     });
-    console.log(chalk.green(`📤 处理图片: ${originalFilename}`));
+    logger.info(`📤 处理图片: ${originalFilename}`);
 
     const fileInputSelector = 'input[type="file"]';
     await page.waitForSelector(fileInputSelector, { timeout: UPLOAD_TIMEOUT });
@@ -137,17 +127,15 @@ export async function processImageInBackground(
 
     const stopGeneratingSelector = 'button[aria-label*="Stop streaming"]';
     try {
-      console.log(chalk.gray(`⏳ 等待生成完成指示器消失...`));
+      logger.debug(`⏳ 等待生成完成指示器消失...`);
       await page.waitForSelector(stopGeneratingSelector, {
         hidden: true,
         timeout: GENERATION_TIMEOUT,
       });
-      console.log(chalk.green(`✅ 生成完成指示器已消失。`));
+      logger.info(`✅ 生成完成指示器已消失。`);
     } catch (e) {
-      console.warn(
-        chalk.yellow(
-          `⏳ 等待生成完成指示器超时 (${GENERATION_TIMEOUT / 1000}s)，将继续检查图像。`,
-        ),
+      logger.warn(
+        `⏳ 等待生成完成指示器超时 (${GENERATION_TIMEOUT / 1000}s)，将继续检查图像。`,
       );
     }
 
@@ -159,9 +147,7 @@ export async function processImageInBackground(
       await page.waitForSelector(imageSelector, { timeout: 10000 });
       imageElement = await page.$(imageSelector);
     } catch (e) {
-      console.warn(
-        chalk.yellow(`⏳ 等待图像元素超时，尝试获取第一个图像元素。`),
-      );
+      logger.warn(`⏳ 等待图像元素超时，尝试获取第一个图像元素。`);
 
       const errorMessage = await page.evaluate(() => {
         const assistantMessages = Array.from(
@@ -171,7 +157,7 @@ export async function processImageInBackground(
         return lastMessage ? lastMessage.textContent.trim() : '未知错误';
       });
 
-      console.error(chalk.red(`❌ 页面错误消息: ${errorMessage}`));
+      logger.error(`❌ 页面错误消息: ${errorMessage}`);
 
       const imageUrls = await page.$$eval('img', (imgs) =>
         imgs
@@ -184,7 +170,7 @@ export async function processImageInBackground(
           ),
       );
       const originalFileUrl = imageUrls[imageUrls.length - 1];
-      console.error(chalk.red('❌ 未找到生成的图像元素。'));
+      logger.error('❌ 未找到生成的图像元素。');
 
       await Promise.allSettled([
         sendToTelegram(
@@ -204,7 +190,7 @@ export async function processImageInBackground(
     }
 
     const imageUrl = await page.evaluate((el) => el.src, imageElement);
-    console.log(chalk.green(`✅ 提取到图像 URL: ${imageUrl}`));
+    logger.info(`✅ 提取到图像 URL: ${imageUrl}`);
 
     const desc = `[${originalFilename}](${imageUrl})`;
 
@@ -220,8 +206,8 @@ export async function processImageInBackground(
     ]);
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error(
-      chalk.red(`❌ [后台] 处理 ${originalFilename} 时出错:`),
+    logger.error(
+      `❌ [后台] 处理 ${originalFilename} 时出错:`,
       errorMsg,
       error.stack,
     );
@@ -231,27 +217,25 @@ export async function processImageInBackground(
       sendToEmail(false, err, recipientEmail, originalFilename),
     ]);
   } finally {
-    console.log(chalk.gray(`  [后台] 关闭页面 ${originalFilename}...`));
+    logger.debug(`[后台] 关闭页面 ${originalFilename}...`);
     if (page && !page.isClosed()) {
       try {
         await page.close();
       } catch (closeError) {
-        console.error('Error closing page:', closeError);
+        logger.error('Error closing page:', closeError);
       }
     }
     if (uploadedFilePath) {
       try {
         await fs.unlink(uploadedFilePath);
-        console.log(
-          chalk.gray(`🗑️ [后台] 已清理临时文件: ${uploadedFilePath}`),
-        );
+        logger.debug(`🗑️ [后台] 已清理临时文件: ${uploadedFilePath}`);
       } catch (cleanupError) {
-        console.error(
-          chalk.yellow(`⚠️ [后台] 清理临时文件 ${uploadedFilePath} 失败:`),
+        logger.warn(
+          `⚠️ [后台] 清理临时文件 ${uploadedFilePath} 失败:`,
           cleanupError,
         );
       }
     }
-    console.log(chalk.cyan(`--- [后台] 处理完成: ${originalFilename} ---`));
+    logger.info(`--- [后台] 处理完成: ${originalFilename} ---`);
   }
 }
