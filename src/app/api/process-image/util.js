@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import logger from '@/app/api/process-image/logger.js';
 
 export async function countdown(label, durationMs) {
   if (durationMs <= 0) return;
@@ -16,17 +16,15 @@ export async function countdown(label, durationMs) {
       process.stdout.cursorTo?.(0);
       process.stdout.write(text);
     } else {
-      console.log(text);
+      logger.info(text);
     }
   };
-  writeOutput(chalk.yellow(`🧙 ${label}（剩余 ${formatTime(remaining)}）`));
+  logger.info(`🧙 ${label}（剩余 ${formatTime(remaining)}）`);
   return new Promise((resolve) => {
     const timer = setInterval(() => {
       remaining -= interval;
       if (process.stdout.isTTY) {
-        writeOutput(
-          chalk.yellow(`⏳ ${label}（剩余 ${formatTime(remaining)}）`),
-        );
+        writeOutput(`⏳ ${label}（剩余 ${formatTime(remaining)}）`);
       }
       if (remaining <= 0) {
         clearInterval(timer);
