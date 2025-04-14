@@ -19,7 +19,7 @@ export async function getBrowser() {
   if (browserInstance) {
     try {
       await browserInstance.version();
-      logger.debug('puppeteer: 重用现有浏览器实例。');
+      logger.info('puppeteer: 重用现有浏览器实例。');
       return browserInstance;
     } catch (e) {
       logger.warn('puppeteer: 浏览器似乎已断开连接，正在启动新的实例。');
