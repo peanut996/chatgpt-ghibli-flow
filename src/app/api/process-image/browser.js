@@ -228,12 +228,7 @@ export async function processImageInBackground(
     }
     const queueSize = getQueue().size;
     if (queueSize < 1) {
-      try {
-        await browser?.close();
-        logger.info('✅ puppeteer: 浏览器实例已关闭。');
-      } catch (closeError) {
-        logger.error('❌ puppeteer: 关闭浏览器实例时出错:', closeError);
-      }
+      await closeBrowser();
     }
     if (uploadedFilePath) {
       try {
@@ -247,5 +242,18 @@ export async function processImageInBackground(
       }
     }
     logger.info(`--- [后台] 处理完成: ${originalFilename} ---`);
+  }
+}
+
+const closeBrowser = async () => {
+  if (browserInstance) {
+    try {
+      await browserInstance.close();
+      logger.info('✅ puppeteer: 浏览器实例已关闭。');
+    } catch (error) {
+      logger.error('❌ puppeteer: 关闭浏览器实例时出错:', error);
+    }finally {
+      browserInstance = null;
+    }
   }
 }
