@@ -17,7 +17,9 @@ export function addToProcessQueue(
   getQueue()
     .add(async () => {
       const emailNotice = recipientEmail ? ` -> ${recipientEmail}` : '';
-      const msg = `⏳ 正在处理任务: ${originalFilename}  ${emailNotice}\n\n📟 Prompt: ${finalPromptToUse}\n\n🎯 队列剩余${getQueueSize()}个任务`;
+      const queueNotice =
+        getQueueSize() > 1 ? `\n\n🎯 队列剩余${getQueueSize()}个任务` : '';
+      const msg = `⏳ 正在处理任务: ${originalFilename}  ${emailNotice}\n\n📟 Prompt: ${finalPromptToUse}${queueNotice}`;
 
       logger.info(msg);
       trySendPhotoOrMessage(uploadedFilePath, msg, originalFilename);
