@@ -16,4 +16,3 @@ jobs:
           token: ${{ secrets.GHCR_CLEANUP_TOKEN }}
           image-names: "chatgpt-ghibli-flow"
           image-tags: "!latest"
-          cut-off: 3d
