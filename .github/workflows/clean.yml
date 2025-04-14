@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 清理 GHCR
-        uses: quartx-analytics/ghcr-cleaner@v1
+        uses: snok/container-retention-policy@v3.0.0
         with:
-          owner-type: user
+          account: user
           token: ${{ secrets.GHCR_CLEANUP_TOKEN }}
-          repository-owner: ${{ github.repository_owner }}
-          repository-name: ${{ github.repository }}
-          keep-at-most: 5
+          image-names: "chatgpt-ghibli-flow"
+          image-tags: "!latest"
+          cut-off: 3d
