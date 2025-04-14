@@ -10,6 +10,7 @@ import { countdown } from '@/app/api/process-image/util.js';
 import { sendToTelegram } from '@/app/api/process-image/telegram.js';
 import { sendToEmail } from '@/app/api/process-image/mail.js';
 import logger from '@/app/api/process-image/logger.js';
+import { getQueue, getQueueSize } from '@/app/api/process-image/queue.js';
 
 let browserInstance = null;
 let isBrowserLaunching = false;
@@ -223,6 +224,15 @@ export async function processImageInBackground(
         await page.close();
       } catch (closeError) {
         logger.error('Error closing page:', closeError);
+      }
+    }
+    const queueSize = getQueue().size;
+    if (queueSize < 1) {
+      try {
+        await browser?.close();
+        logger.info('✅ puppeteer: 浏览器实例已关闭。');
+      } catch (closeError) {
+        logger.error('❌ puppeteer: 关闭浏览器实例时出错:', closeError);
       }
     }
     if (uploadedFilePath) {
