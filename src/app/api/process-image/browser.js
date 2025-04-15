@@ -252,8 +252,8 @@ const closeBrowser = async () => {
       logger.info('✅ puppeteer: 浏览器实例已关闭。');
     } catch (error) {
       logger.error('❌ puppeteer: 关闭浏览器实例时出错:', error);
-    }finally {
+    } finally {
       browserInstance = null;
     }
   }
-}
+};

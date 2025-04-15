@@ -6,7 +6,6 @@ on:
       - master
   workflow_dispatch:
 
-
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/chatgpt-ghibli-flow

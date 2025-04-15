@@ -10,15 +10,32 @@ import {
   getQueueSize,
 } from '@/app/api/process-image/queue.js';
 import logger from '@/app/api/process-image/logger.js';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function POST(req) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    logger.warn('🚫 [API] 未经授权尝试处理图片。');
+    return NextResponse.json(
+      { success: false, error: '未授权，请先登录。' },
+      { status: 401 },
+    );
+  }
+  const userIdentifier =
+    session.user.email || session.user.name || session.user.id || '未知用户';
+  logger.info(`--- 收到来自用户 ${userIdentifier} 的新请求 ---`);
+
   if (req.method !== 'POST') {
+    logger.warn(
+      `[API] 不允许的方法: ${req.method} (来自用户: ${userIdentifier})`,
+    );
     return NextResponse.json(
       { success: false, error: `方法 ${req.method} 不允许` },
       { status: 405, headers: { Allow: 'POST' } },
     );
   }
-  logger.info(`--- 收到新请求 ---`);
+
   let tempFilePath = null;
   let receivedPromptType = PromptType.GHIBLI;
   let finalPromptToUse = defaultPrompts[PromptType.GHIBLI];

@@ -1,4 +1,5 @@
 import './globals.css';
+import AuthProvider from '@/components/AuthProvider.js';
 
 export const metadata = {
   title: 'GhibliFlow Image Generator',
@@ -11,7 +12,9 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </head>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }
