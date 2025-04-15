@@ -10,7 +10,6 @@ import { countdown } from '@/app/api/process-image/util.js';
 import { sendToTelegram } from '@/app/api/process-image/telegram.js';
 import { sendToEmail } from '@/app/api/process-image/mail.js';
 import logger from '@/app/api/process-image/logger.js';
-import { getQueue, getQueueSize } from '@/app/api/process-image/queue.js';
 
 let browserInstance = null;
 let isBrowserLaunching = false;
@@ -225,10 +224,6 @@ export async function processImageInBackground(
       } catch (closeError) {
         logger.error('Error closing page:', closeError);
       }
-    }
-    const queueSize = getQueue().size;
-    if (queueSize < 1) {
-      await closeBrowser();
     }
     if (uploadedFilePath) {
       try {
