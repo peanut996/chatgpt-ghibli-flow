@@ -127,7 +127,7 @@ export async function processImageInBackground(
 
     const stopGeneratingSelector = 'button[aria-label*="Stop streaming"]';
     try {
-      logger.debug(`⏳ 等待生成完成指示器消失...`);
+      logger.info(`⏳ 等待生成完成指示器消失...`);
       await page.waitForSelector(stopGeneratingSelector, {
         hidden: true,
         timeout: GENERATION_TIMEOUT,
