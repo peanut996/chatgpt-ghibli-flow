@@ -24,7 +24,10 @@ export async function POST(req) {
     );
   }
   const userIdentifier =
-    session.user.email || session.user.name || session.user.id || '未知用户';
+    session?.user?.email ||
+    session?.user?.name ||
+    session?.user?.id ||
+    '未知用户';
   logger.info(`--- 收到来自用户 ${userIdentifier} 的新请求 ---`);
 
   if (req.method !== 'POST') {
