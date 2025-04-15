@@ -14,8 +14,9 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function POST(req) {
+  const authHeader = req.headers.get('Authorization');
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (authHeader !== `Bearer ${process.env.NEXTAUTH_SECRET}` && !session) {
     logger.warn('🚫 [API] 未经授权尝试处理图片。');
     return NextResponse.json(
       { success: false, error: '未授权，请先登录。' },
