@@ -233,30 +233,51 @@ export default function HomePage() {
         </a>
 
         {/* 用户头像和登录状态区域 */}
+        {/* 用户头像和登录状态区域 */}
         <div className="absolute top-4 left-4 z-20 md:top-6 md:left-6">
           {isLoadingSession ? (
               <span className="animate-pulse rounded-md bg-gray-200 px-3 py-1.5 text-sm text-gray-500 shadow-sm">
-            加载中...
-          </span>
+      加载中...
+    </span>
           ) : session ? (
-              <div className="flex items-center space-x-2 rounded-lg bg-white/80 p-2 shadow-md backdrop-blur-sm">
-                <div className="relative">
+              <div className="group relative">
+                {/* 默认只显示头像和在线状态 */}
+                <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/80 p-1 shadow-md backdrop-blur-sm transition-all duration-300">
                   <img
                       src={session.user.image}
                       alt="用户头像"
                       className="h-8 w-8 rounded-full border border-gray-200 object-cover"
                   />
-                  <div className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-green-400"></div>
+                  <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-green-400"></div>
                 </div>
-                <span className="hidden text-sm font-medium text-gray-700 sm:inline">
+
+                {/* 悬停时显示的扩展信息 */}
+                <div className=" invisible absolute left-0 top-0 opacity-0 transition-all duration-300 group-hover:visible group-hover:opacity-100">
+                  {/* 使用精确定位和尺寸，确保头像完全重合 */}
+                  <div className=" flex items-center rounded-lg bg-white/90 shadow-md backdrop-blur-sm">
+                    {/* 头像容器 - 与原始头像完全重合 */}
+                    <div className="relative flex h-10 w-10 items-center justify-center rounded-full p-1">
+                      <img
+                          src={session.user.image}
+                          alt="用户头像"
+                          className="h-8 w-8 rounded-full border border-gray-200 object-cover"
+                      />
+                    </div>
+
+                    {/* 用户名和退出按钮 */}
+                    <div className="flex items-center space-x-3 px-3 py-2">
+            <span className="max-w-[120px] truncate text-sm font-medium text-gray-700" title={session.user.name || session.user.email}>
               {session.user.name || session.user.email}
             </span>
-                <button
-                    onClick={() => signOut()}
-                    className="rounded-md bg-red-100 px-3 py-1 text-xs font-medium text-red-700 shadow-sm transition-colors hover:bg-red-200 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:outline-none sm:text-sm"
-                >
-                  退出
-                </button>
+                      <button
+                          onClick={() => signOut()}
+                          className="whitespace-nowrap rounded-md bg-red-100 px-3 py-1 text-xs font-medium text-red-700 shadow-sm transition-colors hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                      >
+                        退出
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
           ) : (
               <button
