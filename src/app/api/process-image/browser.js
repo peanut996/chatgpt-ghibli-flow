@@ -108,6 +108,7 @@ export async function processImageInBackground(
   let page = null;
 
   try {
+    const startTime = Date.now();
     browser = await getBrowser();
     page = await browser.newPage();
     await page.goto('https://chatgpt.com/?model=gpt-4o', {
@@ -189,9 +190,10 @@ export async function processImageInBackground(
       ]);
       return;
     }
-
+    const endTime = Date.now();
+    const elapsedTime = Math.floor((endTime - startTime) / 1000);
     const imageUrl = await page.evaluate((el) => el.src, imageElement);
-    logger.info(`✅ 提取到图像 URL: ${imageUrl}`);
+    logger.info(`✅ 提取到图像 URL: ${imageUrl}, 耗时: ${elapsedTime}s`);
 
     const desc = `[${originalFilename}](${imageUrl})`;
 
