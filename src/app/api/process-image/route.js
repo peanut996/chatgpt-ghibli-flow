@@ -64,9 +64,7 @@ async function validateAuth(req) {
     };
   }
 
-  logger.info(`--- 收到来自用户 ${session.user.email} 的新请求 ---`);
-
-  if (EMAIL_WHITELIST && EMAIL_WHITELIST.length > 1) {
+  if (EMAIL_WHITELIST && EMAIL_WHITELIST.length > 0) {
     if (!EMAIL_WHITELIST.includes(session.user.email)) {
       logger.warn(`🚫 [API] 未经授权的邮箱: ${session.user.email}`);
       return {
