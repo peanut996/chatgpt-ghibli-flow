@@ -3,7 +3,12 @@ import path from 'path';
 import fs from 'fs/promises';
 import os from 'os';
 import crypto from 'crypto';
-import { defaultPrompts, EMAIL_REGEX_BACKEND, PromptType } from './config.js';
+import {
+  defaultPrompts,
+  EMAIL_REGEX_BACKEND,
+  EMAIL_WHITELIST,
+  PromptType,
+} from './config.js';
 import { sendToTelegram } from '@/app/api/process-image/telegram.js';
 import {
   addToProcessQueue,
@@ -13,16 +18,82 @@ import logger from '@/app/api/process-image/logger.js';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
-export async function POST(req) {
+async function validateAuth(req) {
   const authHeader = req.headers.get('Authorization');
+  const isSuperUser = authHeader === `Bearer ${process.env.NEXTAUTH_SECRET}`;
+
+  if (isSuperUser) {
+    return { isAuthorized: true };
+  }
+
   const session = await getServerSession(authOptions);
-  if (authHeader !== `Bearer ${process.env.NEXTAUTH_SECRET}` && !session) {
+
+  if (!session) {
     logger.warn('🚫 [API] 未经授权尝试处理图片。');
+    return {
+      isAuthorized: false,
+      error: '未授权，请先登录。',
+      status: 401,
+    };
+  }
+
+  if (session.error) {
+    logger.warn(`🚫 [API] 会话错误: ${session.error}`);
+    return {
+      isAuthorized: false,
+      error: '会话错误，请重新登录。',
+      status: 401,
+    };
+  }
+
+  if (!session.user) {
+    logger.warn('🚫 [API] 会话中缺少用户信息。');
+    return {
+      isAuthorized: false,
+      error: '会话中缺少用户信息。',
+      status: 401,
+    };
+  }
+
+  if (!session.user.email) {
+    logger.warn('🚫 [API] 会话中缺少用户邮箱。');
+    return {
+      isAuthorized: false,
+      error: '会话中缺少用户邮箱。',
+      status: 401,
+    };
+  }
+
+  logger.info(`--- 收到来自用户 ${session.user.email} 的新请求 ---`);
+
+  if (EMAIL_WHITELIST && EMAIL_WHITELIST.length > 1) {
+    if (!EMAIL_WHITELIST.includes(session.user.email)) {
+      logger.warn(`🚫 [API] 未经授权的邮箱: ${session.user.email}`);
+      return {
+        isAuthorized: false,
+        error: '您的邮箱未被授权使用此服务。',
+        status: 403,
+      };
+    }
+  }
+
+  return {
+    isAuthorized: true,
+    session,
+  };
+}
+
+export async function POST(req) {
+  const authResult = await validateAuth(req, logger);
+  if (!authResult.isAuthorized) {
     return NextResponse.json(
-      { success: false, error: '未授权，请先登录。' },
-      { status: 401 },
+      { success: false, error: authResult.error },
+      { status: authResult.status },
     );
   }
+
+  const session = authResult.session;
+
   const userIdentifier =
     session?.user?.email ||
     session?.user?.name ||

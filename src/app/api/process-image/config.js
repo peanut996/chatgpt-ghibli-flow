@@ -46,3 +46,7 @@ export const SMTP_USER = process.env.SMTP_USER;
 export const SMTP_PASS = process.env.SMTP_PASS;
 export const SMTP_FROM = 'GhibliFlow Bot <no-reply@example.com>';
 export const EMAIL_REGEX_BACKEND = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export const EMAIL_WHITELIST = process.env.EMAIL_WHITELIST
+  ? process.env.EMAIL_WHITELIST.split(',').forEach((mail) => mail.trim())
+  : [];
