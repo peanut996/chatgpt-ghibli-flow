@@ -75,16 +75,11 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || '22' }}
           script: |
-            cd ${{ secrets.PROJECT_PATH_ON_SERVER }} || { echo "Failed to cd into project directory"; exit 1; }
-
-            if [ ! -f ".env" ]; then
-              echo "Error: .env file not found on the server in $(pwd). Deployment aborted."
-              exit 1
-            fi
-            if [ ! -f "cookies.json" ]; then
-              echo "Error: cookies.json file not found on the server in $(pwd). Deployment aborted."
-              exit 1
-            fi
+            # Create .env file from environment variable
+            echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
+            
+            # Create cookies.json from environment variable
+            echo "${{ secrets.COOKIES_JSON_CONTENT }}" > cookies.json
 
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
