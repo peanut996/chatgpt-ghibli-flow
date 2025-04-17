@@ -86,19 +86,32 @@ jobs:
     steps:
       - name: SSH into Server and Deploy
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          # These env vars are made available to the action
+          SECRET_ENV_CONTENT: ${{ secrets.ENV_FILE_CONTENT }}
+          SECRET_COOKIES_CONTENT: ${{ secrets.COOKIES_JSON_CONTENT }}
+          SECRET_GHCR_PAT: ${{ secrets.GHCR_PAT }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || '22' }}
+          envs: SECRET_ENV_CONTENT, SECRET_COOKIES_CONTENT, SECRET_GHCR_PAT
           script: |
-            # Create .env file from environment variable
-            echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
+            echo "Creating .env file from environment variable..."
+            # Use printf for safer handling of special characters/newlines
+            # Access the variable passed via 'envs'
+            printf "%s\n" "$SECRET_ENV_CONTENT" > .env || { echo "Failed to write .env"; exit 1; }
+  
+            echo "Creating cookies.json file from environment variable..."
+            printf "%s\n" "$SECRET_COOKIES_CONTENT" > cookies.json || { echo "Failed to write cookies.json"; exit 1; }
+  
+            # Optional: Verify files exist and are not empty, without printing content
+            echo "Verifying file creation..."
+            if [ -s .env ]; then echo ".env created successfully."; else echo "ERROR: .env is missing or empty!"; exit 1; fi
+            if [ -s cookies.json ]; then echo "cookies.json created successfully."; else echo "ERROR: cookies.json is missing or empty!"; exit 1; fi
 
-            # Create cookies.json from environment variable
-            echo "${{ secrets.COOKIES_JSON_CONTENT }}" > cookies.json
-
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "$SECRET_GHCR_PAT" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
             IMAGE_TO_PULL="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
 
