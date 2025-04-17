@@ -228,10 +228,6 @@ export async function processImageInBackground(
         logger.error('Error closing page:', closeError);
       }
     }
-    const queueSize = getQueue().size;
-    if (queueSize < 1) {
-      await closeBrowser();
-    }
     if (uploadedFilePath) {
       try {
         await fs.unlink(uploadedFilePath);
